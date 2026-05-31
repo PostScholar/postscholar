@@ -22,4 +22,4 @@ Thumbs.db
 .vite/
 
 # Railway and Vercel
-.vercel/
+.vercel/cookies.txt

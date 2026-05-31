@@ -5,25 +5,51 @@ const db = require('../db')
 
 const router = express.Router()
 
+// bcrypt cost factor — 12 is slow enough to resist brute force,
+// fast enough to not noticeably delay login
 const BCRYPT_COST = 12
+
+// JWT expiry — 7 days, stored in an httpOnly cookie
 const JWT_EXPIRY = '7d'
+
+// Username: 3-30 chars, lowercase letters, numbers, underscores only
 const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/
+
+// Basic email format check — not exhaustive, just sanity validation
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+/**
+ * signToken(payload)
+ * Signs a JWT with the app secret and 7-day expiry.
+ * Payload contains { userId, username }.
+ */
 function signToken(payload) {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: JWT_EXPIRY })
 }
 
+/**
+ * setTokenCookie(res, token)
+ * Sets the JWT as an httpOnly cookie.
+ * - sameSite: 'none' in production (required for cross-origin requests
+ *   between postscholar.org and Railway backend)
+ * - sameSite: 'strict' in development (same origin, more secure)
+ * - secure: true in production only (https required for sameSite: none)
+ */
 function setTokenCookie(res, token) {
   res.cookie('token', token, {
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 7 * 24 * 60 * 60 * 1000
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
   })
 }
 
+// ---------------------------------------------------------------------------
 // POST /auth/register
+// ---------------------------------------------------------------------------
+// Creates a new user account, hashes the password with bcrypt, signs a JWT,
+// and sets it as an httpOnly cookie. Returns only the username on success.
+// ---------------------------------------------------------------------------
 router.post('/register', async (req, res) => {
   const { email, username, password } = req.body
 
@@ -37,6 +63,7 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 8 characters' })
   }
 
+  // Check for duplicate email or username in one query
   const existing = await db.query(
     'SELECT id FROM users WHERE email = $1 OR username = $2',
     [email, username]
@@ -59,7 +86,15 @@ router.post('/register', async (req, res) => {
   res.status(201).json({ username: user.username })
 })
 
+// ---------------------------------------------------------------------------
 // POST /auth/login
+// ---------------------------------------------------------------------------
+// Validates email + password, sets a new JWT cookie on success.
+//
+// Timing attack protection: if the user is not found, we still run bcrypt
+// compare against a dummy hash. This ensures the response time is the same
+// whether the email exists or not, preventing user enumeration via timing.
+// ---------------------------------------------------------------------------
 const DUMMY_HASH = '$2b$12$invalidhashfortimingprotectiononly000000000000000000000'
 
 router.post('/login', async (req, res) => {
@@ -75,6 +110,7 @@ router.post('/login', async (req, res) => {
   )
   const user = result.rows[0]
 
+  // Always run bcrypt.compare even if user not found (timing protection)
   const hashToCompare = user ? user.password_hash : DUMMY_HASH
   const match = await bcrypt.compare(password, hashToCompare)
 
@@ -90,7 +126,12 @@ router.post('/login', async (req, res) => {
 
 const authenticateToken = require('../middleware/authenticateToken')
 
+// ---------------------------------------------------------------------------
 // GET /auth/me
+// ---------------------------------------------------------------------------
+// Protected. Returns the currently authenticated user's profile.
+// Used by the frontend AuthContext on page load to restore session state.
+// ---------------------------------------------------------------------------
 router.get('/me', authenticateToken, async (req, res) => {
   const result = await db.query(
     'SELECT id, username, email, created_at FROM users WHERE id = $1',

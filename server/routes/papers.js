@@ -125,7 +125,7 @@ router.post('/lookup', authenticateToken, async (req, res) => {
         `INSERT INTO discussions (paper_id, created_by)
          VALUES ($1, $2)
          RETURNING id`,
-        [paper.id, req.user.id]
+        [paper.id, req.user.userId]
       )
       const discussion_id = discussionResult.rows[0].id
 
@@ -149,16 +149,16 @@ router.post('/lookup', authenticateToken, async (req, res) => {
   }
 })
 
-// GET /papers/*
+// GET /papers/*doi
 // Public. Returns paper + discussion ID by DOI.
 // Wildcard needed because DOIs contain slashes.
+// Express 5 splits on each / and returns an array, so we join with /
 router.get('/*doi', optionalAuth, async (req, res) => {
   try {
     const doi = Array.isArray(req.params.doi)
-  ? req.params.doi.join('/').trim().toLowerCase()
-  : req.params.doi?.toString().trim().toLowerCase()
-// console.log('doi param:', req.params.doi) 
-// Express 5 changed how wildcard routes work. In Express 4, /* captured the entire path as a single string in req.params[0]. In Express 5, /*doi splits on each / and returns an array. So 10.1145/3290605.3300651 came back as ['10.1145', '3290605.3300651'] instead of the full string. Joining the array with / reconstructed it correctly.
+      ? req.params.doi.join('/').trim().toLowerCase()
+      : req.params.doi?.toString().trim().toLowerCase()
+
     if (!doi) {
       return res.status(400).json({ error: 'doi is required' })
     }
