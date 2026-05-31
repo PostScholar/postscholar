@@ -5,27 +5,25 @@ const authenticateToken = require('../middleware/authenticateToken')
 const optionalAuth = require('../middleware/optionalAuth')
 
 /**
- * buildTree(comments)
+ * buildTree(comments, verifiedUserIds)
  *
- * Takes a flat array of comment rows from the database and converts it
- * into a nested tree structure where each top-level comment has a
- * `replies` array containing its direct children, and each child
- * recursively contains its own `replies` array.
- *
- * This is done in JavaScript rather than SQL because recursive SQL
- * queries return flat results anyway and JS tree-building is simpler
- * to read and maintain.
+ * Takes a flat array of comment rows and a Set of user_ids that are verified
+ * authors for this discussion. Returns a nested tree where each comment has:
+ *   - is_verified_author: true if the commenter is a verified author
+ *   - replies: array of child comments (recursive, unlimited depth)
  */
-function buildTree(comments) {
-  const map = {}   // id -> comment node with empty replies array
-  const roots = [] // top-level comments (no parent)
+function buildTree(comments, verifiedUserIds) {
+  const map = {}
+  const roots = []
 
-  // First pass: index every comment by id
   for (const comment of comments) {
-    map[comment.id] = { ...comment, replies: [] }
+    map[comment.id] = {
+      ...comment,
+      is_verified_author: verifiedUserIds.has(comment.user_id),
+      replies: []
+    }
   }
 
-  // Second pass: attach each comment to its parent or to roots
   for (const comment of comments) {
     if (comment.parent_comment_id === null) {
       roots.push(map[comment.id])
@@ -37,15 +35,29 @@ function buildTree(comments) {
   return roots
 }
 
+/**
+ * getVerifiedUserIds(discussion_id)
+ *
+ * Returns a Set of user_ids that have a verified author record for the given
+ * discussion. Used to compute is_verified_author on comments without a
+ * per-comment query or a complex JOIN on the recursive CTE.
+ */
+async function getVerifiedUserIds(discussion_id) {
+  const result = await pool.query(
+    'SELECT user_id FROM author_verifications WHERE discussion_id = $1',
+    [discussion_id]
+  )
+  return new Set(result.rows.map(r => r.user_id))
+}
+
 // ---------------------------------------------------------------------------
 // GET /discussions/:id/comments
 // ---------------------------------------------------------------------------
-// Public (optionalAuth). Returns a paginated list of top-level comments for
-// a discussion, each with its full reply tree nested inside.
+// Public (optionalAuth). Returns a paginated list of top-level comments with
+// all replies nested. Each comment includes is_verified_author flag.
 //
-// Pagination is cursor-based using created_at. Pass ?cursor=<timestamp> to
-// get the next page. Page size is 20 top-level comments. All replies for
-// those 20 comments are fetched in a single recursive CTE query and attached.
+// Cursor-based pagination on created_at. Page size: 20 top-level comments.
+// All replies for the page are fetched via recursive CTE in one query.
 // ---------------------------------------------------------------------------
 router.get('/:id/comments', optionalAuth, async (req, res) => {
   try {
@@ -53,7 +65,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
     const cursor = req.query.cursor || null
     const limit = 20
 
-    // Confirm the discussion exists before querying comments
+    // Confirm the discussion exists
     const discussionCheck = await pool.query(
       'SELECT id FROM discussions WHERE id = $1',
       [discussion_id]
@@ -62,7 +74,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'Discussion not found' })
     }
 
-    // Fetch one extra row beyond the limit to detect if a next page exists
+    // Fetch one extra row to detect if a next page exists
     const topLevelResult = await pool.query(
       `SELECT * FROM comments
        WHERE discussion_id = $1
@@ -75,7 +87,6 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
 
     const topLevelRows = topLevelResult.rows
     const hasNextPage = topLevelRows.length > limit
-    // Trim the extra row — it was only used to check for next page
     const pageRows = hasNextPage ? topLevelRows.slice(0, limit) : topLevelRows
 
     let tree = []
@@ -83,15 +94,12 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
     if (pageRows.length > 0) {
       const topLevelIds = pageRows.map(r => r.id)
 
-      // Use a recursive CTE to fetch all descendants of the current page's
-      // top-level comments in a single query, no matter how deep the thread is
+      // Fetch all descendants of this page's top-level comments recursively
       const descendantsResult = await pool.query(
         `WITH RECURSIVE descendants AS (
-           -- Base case: direct children of top-level comments on this page
            SELECT * FROM comments
            WHERE parent_comment_id = ANY($1::uuid[])
            UNION ALL
-           -- Recursive case: children of children, indefinitely
            SELECT c.* FROM comments c
            INNER JOIN descendants d ON c.parent_comment_id = d.id
          )
@@ -99,16 +107,13 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
         [topLevelIds]
       )
 
-      // Combine top-level rows and all their descendants, then build the tree
-      const allComments = [
-        ...pageRows,
-        ...descendantsResult.rows
-      ]
+      // Fetch verified author user_ids for this discussion
+      const verifiedUserIds = await getVerifiedUserIds(discussion_id)
 
-      tree = buildTree(allComments)
+      const allComments = [...pageRows, ...descendantsResult.rows]
+      tree = buildTree(allComments, verifiedUserIds)
     }
 
-    // Return the created_at of the last top-level comment as the next cursor
     const nextCursor = hasNextPage ? pageRows[pageRows.length - 1].created_at : null
 
     return res.json({ comments: tree, next_cursor: nextCursor })
@@ -122,9 +127,8 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
 // GET /discussions/:id/comments/search
 // ---------------------------------------------------------------------------
 // Public (optionalAuth). Full-text keyword search across all comments in a
-// discussion. Uses PostgreSQL's built-in tsvector/tsquery for relevance
-// ranking. Returns up to 100 flat results ordered by rank descending.
-// Results are flat (not nested) — the frontend highlights matches in context.
+// discussion. Returns up to 100 flat results ordered by relevance rank.
+// is_verified_author is included on each result.
 // ---------------------------------------------------------------------------
 router.get('/:id/comments/search', optionalAuth, async (req, res) => {
   try {
@@ -143,27 +147,34 @@ router.get('/:id/comments/search', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'Discussion not found' })
     }
 
-    // plainto_tsquery converts plain text input (e.g. "machine learning")
-    // into a tsquery without requiring the user to know tsquery syntax.
-    // ts_rank scores how well the document matches the query.
-    const result = await pool.query(
-      `SELECT
-         id,
-         user_id,
-         parent_comment_id,
-         depth,
-         body,
-         created_at,
-         ts_rank(to_tsvector('english', body), plainto_tsquery('english', $2)) AS rank
-       FROM comments
-       WHERE discussion_id = $1
-         AND to_tsvector('english', body) @@ plainto_tsquery('english', $2)
-       ORDER BY rank DESC
-       LIMIT 100`,
-      [discussion_id, q.trim()]
-    )
+    const [searchResult, verifiedUserIds] = await Promise.all([
+      // Full-text search using PostgreSQL tsvector/tsquery
+      pool.query(
+        `SELECT
+           id,
+           user_id,
+           parent_comment_id,
+           depth,
+           body,
+           created_at,
+           ts_rank(to_tsvector('english', body), plainto_tsquery('english', $2)) AS rank
+         FROM comments
+         WHERE discussion_id = $1
+           AND to_tsvector('english', body) @@ plainto_tsquery('english', $2)
+         ORDER BY rank DESC
+         LIMIT 100`,
+        [discussion_id, q.trim()]
+      ),
+      // Fetch verified authors in parallel
+      getVerifiedUserIds(discussion_id)
+    ])
 
-    return res.json({ results: result.rows })
+    const results = searchResult.rows.map(row => ({
+      ...row,
+      is_verified_author: verifiedUserIds.has(row.user_id)
+    }))
+
+    return res.json({ results })
   } catch (err) {
     console.error('GET /discussions/:id/comments/search error:', err)
     res.status(500).json({ error: 'Internal server error' })
@@ -174,14 +185,13 @@ router.get('/:id/comments/search', optionalAuth, async (req, res) => {
 // POST /discussions/:id/comments
 // ---------------------------------------------------------------------------
 // Protected (authenticateToken). Creates a new comment or reply.
+// Returns the comment with is_verified_author flag attached.
 //
 // Body params:
-//   body              (string, required) — comment text
-//   parent_comment_id (UUID, optional)  — omit for top-level comment;
-//                                         provide to reply to any comment
+//   body              (string, required)
+//   parent_comment_id (UUID, optional) — omit for top-level comment
 //
-// Depth is computed server-side: parent.depth + 1. This means nesting is
-// unlimited — the client controls how deep threads visually render.
+// Depth is computed server-side as parent.depth + 1.
 // ---------------------------------------------------------------------------
 router.post('/:id/comments', authenticateToken, async (req, res) => {
   try {
@@ -192,7 +202,6 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'body is required' })
     }
 
-    // Confirm the discussion exists
     const discussionCheck = await pool.query(
       'SELECT id FROM discussions WHERE id = $1',
       [discussion_id]
@@ -201,11 +210,9 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Discussion not found' })
     }
 
-    // Default depth is 0 (top-level). If replying, inherit parent's depth + 1.
     let depth = 0
 
     if (parent_comment_id) {
-      // Verify the parent comment exists and belongs to this discussion
       const parentCheck = await pool.query(
         'SELECT id, depth FROM comments WHERE id = $1 AND discussion_id = $2',
         [parent_comment_id, discussion_id]
@@ -223,7 +230,20 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       [discussion_id, req.user.userId, parent_comment_id || null, body.trim(), depth]
     )
 
-    return res.status(201).json({ comment: result.rows[0] })
+    const comment = result.rows[0]
+
+    // Check if the commenter is a verified author for this discussion
+    const verifiedCheck = await pool.query(
+      'SELECT id FROM author_verifications WHERE user_id = $1 AND discussion_id = $2',
+      [req.user.userId, discussion_id]
+    )
+
+    return res.status(201).json({
+      comment: {
+        ...comment,
+        is_verified_author: verifiedCheck.rows.length > 0
+      }
+    })
   } catch (err) {
     console.error('POST /discussions/:id/comments error:', err)
     res.status(500).json({ error: 'Internal server error' })
@@ -234,9 +254,8 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
 // PATCH /discussions/comments/:id
 // ---------------------------------------------------------------------------
 // Protected (authenticateToken). Edits the body of a comment.
-// Only the comment's author can edit it — enforced by checking user_id in
-// the WHERE clause. If no rows are updated, we return 403 (not found or
-// not the owner) rather than leaking which case it is.
+// Only the comment's author can edit — enforced via user_id in WHERE clause.
+// Returns 403 if not found or not the owner.
 // ---------------------------------------------------------------------------
 router.patch('/comments/:id', authenticateToken, async (req, res) => {
   try {
@@ -269,8 +288,8 @@ router.patch('/comments/:id', authenticateToken, async (req, res) => {
 // DELETE /discussions/comments/:id
 // ---------------------------------------------------------------------------
 // Protected (authenticateToken). Deletes a comment.
-// Only the comment's author can delete it. Deleting a parent comment will
-// cascade-delete all its replies (enforced by ON DELETE CASCADE in the schema).
+// Only the comment's author can delete it.
+// Cascades to all replies via ON DELETE CASCADE in the schema.
 // ---------------------------------------------------------------------------
 router.delete('/comments/:id', authenticateToken, async (req, res) => {
   try {
@@ -296,8 +315,8 @@ router.delete('/comments/:id', authenticateToken, async (req, res) => {
 // DELETE /discussions/:id
 // ---------------------------------------------------------------------------
 // Protected (authenticateToken). Deletes an entire discussion.
-// Only the user who created the discussion can delete it. Deleting a
-// discussion cascades to all its comments (ON DELETE CASCADE in schema).
+// Only the discussion creator can delete it.
+// Cascades to all comments via ON DELETE CASCADE in the schema.
 // ---------------------------------------------------------------------------
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
