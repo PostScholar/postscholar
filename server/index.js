@@ -6,7 +6,7 @@ const cookieParser = require('cookie-parser')
 const app = express()
 
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: [process.env.CLIENT_URL, 'https://www.postscholar.org', 'https://postscholar.vercel.app'],
   credentials: true
 }))
 app.use(express.json())
