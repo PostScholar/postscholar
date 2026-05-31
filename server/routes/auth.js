@@ -17,7 +17,7 @@ function signToken(payload) {
 function setTokenCookie(res, token) {
   res.cookie('token', token, {
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     secure: process.env.NODE_ENV === 'production',
     maxAge: 7 * 24 * 60 * 60 * 1000
   })
