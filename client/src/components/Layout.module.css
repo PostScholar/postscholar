@@ -1,0 +1,41 @@
+/* Layout — root page layout */
+
+.root {
+  min-height: 100vh;
+  background: var(--bg-base);
+}
+
+.body {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+  display: flex;
+  gap: var(--space-8);
+  align-items: flex-start;
+}
+
+.main {
+  flex: 1;
+  min-width: 0; /* prevent flex blowout */
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  position: sticky;
+  top: calc(var(--nav-height) + var(--space-8));
+}
+
+/* Responsive — stack on narrow screens */
+@media (max-width: 768px) {
+  .body {
+    flex-direction: column;
+    padding: var(--space-6) var(--space-4);
+    gap: var(--space-6);
+  }
+
+  .sidebar {
+    width: 100%;
+    position: static;
+  }
+}

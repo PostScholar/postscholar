@@ -1,40 +1,90 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import styles from './Auth.module.css'
 
+/**
+ * Login page
+ * Centered card layout, inline field-level errors, link to register.
+ */
 export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
+    setLoading(true)
     const form = e.target
     try {
       await login(form.email.value, form.password.value)
       navigate('/')
     } catch (err) {
       setError(err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div>
-      <h1>Log in</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="email">Email</label>
-          <input id="email" name="email" type="email" required />
+    <div className={styles.page}>
+      <div className={styles.card}>
+        <div className={styles.header}>
+          <Link to="/" className={styles.wordmark}>PostScholar</Link>
+          <h1 className={styles.title}>Sign in</h1>
+          <p className={styles.subtitle}>
+            Continue to your account
+          </p>
         </div>
-        <div>
-          <label htmlFor="password">Password</label>
-          <input id="password" name="password" type="password" required />
-        </div>
-        {error && <p>{error}</p>}
-        <button type="submit">Log in</button>
-      </form>
-      <p>No account? <Link to="/register">Register</Link></p>
+
+        <form className={styles.form} onSubmit={handleSubmit}>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="email">Email</label>
+            <input
+              className={styles.input}
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+            />
+          </div>
+
+          <div className={styles.field}>
+            <div className={styles.labelRow}>
+              <label className={styles.label} htmlFor="password">Password</label>
+              <Link to="/forgot-password" className={styles.forgotLink}>
+                Forgot password?
+              </Link>
+            </div>
+            <input
+              className={styles.input}
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
+          </div>
+
+          {error && <p className={styles.error}>{error}</p>}
+
+          <button
+            className={styles.submitBtn}
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? 'Signing in...' : 'Sign in'}
+          </button>
+        </form>
+
+        <p className={styles.switchLink}>
+          No account?{' '}
+          <Link to="/register">Create one</Link>
+        </p>
+      </div>
     </div>
   )
 }
