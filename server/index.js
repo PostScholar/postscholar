@@ -2,6 +2,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '.env') })
 const express = require('express')
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
+const papersRouter = require('./routes/papers')
 
 const app = express()
 
@@ -19,7 +20,9 @@ app.get('/health', async (req, res) => {
   res.json({ status: 'ok' })
 })
 
+app.use('/papers', papersRouter)
 app.use('/auth', require('./routes/auth'))
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => console.log(`server running on port ${PORT}`))
+
