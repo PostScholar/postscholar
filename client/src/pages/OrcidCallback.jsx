@@ -1,0 +1,92 @@
+import { useEffect, useState } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import styles from './OrcidCallback.module.css'
+
+/**
+ * OrcidCallback — /orcid/callback
+ *
+ * ORCID redirects here after OAuth with ?code=xxx&state=xxx
+ * We send these to POST /auth/orcid/callback which verifies
+ * the author and stores the verification record.
+ *
+ * After success or failure, we redirect back to the discussion.
+ */
+export default function OrcidCallback() {
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const [status, setStatus] = useState('loading') // loading | success | error | no_match
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    const code = searchParams.get('code')
+    const state = searchParams.get('state')
+
+    if (!code || !state) {
+      setStatus('error')
+      setMessage('Invalid callback — missing code or state.')
+      return
+    }
+
+    async function exchange() {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/orcid/callback`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ code, state })
+        })
+        const data = await res.json()
+
+        if (!res.ok) {
+          setStatus('error')
+          setMessage(data.error || 'Verification failed')
+          return
+        }
+
+        if (data.verified) {
+          setStatus('success')
+          setMessage('Author verified. Your badge will appear on your comments.')
+        } else {
+          setStatus('no_match')
+          setMessage(data.reason || 'Your ORCID name did not match any author on this paper.')
+        }
+
+        // Redirect back after 3 seconds
+        // In E9 we'll extract discussion_id from the state JWT to redirect precisely
+        setTimeout(() => navigate('/'), 3000)
+      } catch {
+        setStatus('error')
+        setMessage('Failed to reach server')
+      }
+    }
+
+    exchange()
+  }, [])
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.card}>
+        {status === 'loading' && (
+          <>
+            <div className={styles.spinner} />
+            <p className={styles.message}>Verifying your ORCID...</p>
+          </>
+        )}
+        {status === 'success' && (
+          <>
+            <div className={styles.icon}>✓</div>
+            <p className={`${styles.message} ${styles.success}`}>{message}</p>
+            <p className={styles.hint}>Redirecting...</p>
+          </>
+        )}
+        {(status === 'error' || status === 'no_match') && (
+          <>
+            <div className={`${styles.icon} ${styles.failIcon}`}>✗</div>
+            <p className={`${styles.message} ${styles.fail}`}>{message}</p>
+            <p className={styles.hint}>Redirecting...</p>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}

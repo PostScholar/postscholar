@@ -165,3 +165,12 @@
 .switchLink a:hover {
   text-decoration: underline;
 }
+.successBox {
+  padding: var(--space-4);
+  background: rgba(90, 138, 106, 0.1);
+  border: 1px solid rgba(90, 138, 106, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}

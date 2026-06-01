@@ -4,6 +4,12 @@ import ThemePicker from './components/ThemePicker'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Home from './pages/Home'
+import Discussion from './pages/Discussion'
+import Start from './pages/Start'
+import Verify from './pages/Verify'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
+import OrcidCallback from './pages/OrcidCallback'
 
 /*
  * ProtectedRoute — redirects to /login if not authenticated.
@@ -21,13 +27,13 @@ function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/d/:id" element={<Discussion />} />
       {/* Routes added in E4–E7 */}
-      {/* <Route path="/start" element={<Start />} /> */}
-      {/* <Route path="/d/:id" element={<Discussion />} /> */}
-      {/* <Route path="/verify" element={<Verify />} /> */}
-      {/* <Route path="/u/:username" element={<Profile />} /> */}
-      {/* <Route path="/orcid/callback" element={<OrcidCallback />} /> */}
-      {/* <Route path="/reset-password" element={<ResetPassword />} /> */}
+      <Route path="/verify" element={<Verify />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/orcid/callback" element={<OrcidCallback />} />
+      {/*<Route path="/u/:username" element={<Profile />} /> */}
     </Routes>
   )
 }
