@@ -154,3 +154,9 @@
 .replies {
   margin-top: var(--space-2);
 }
+.formError {
+  font-size: var(--text-xs);
+  color: #c0392b;
+  margin: 0;
+}
+.formError { font-size: var(--text-xs); color: #c0392b; margin: 0; }

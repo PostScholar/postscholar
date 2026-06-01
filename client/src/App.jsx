@@ -33,6 +33,7 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/orcid/callback" element={<OrcidCallback />} />
+      <Route path="/start" element={<Start />} />
       {/*<Route path="/u/:username" element={<Profile />} /> */}
     </Routes>
   )

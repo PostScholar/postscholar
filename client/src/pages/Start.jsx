@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/Layout'
+import { postComment } from '../lib/api'
 import styles from './Start.module.css'
 
 /**
@@ -89,9 +90,19 @@ export default function Start() {
 
   async function handleSubmitFound(e) {
     e.preventDefault()
-    // Discussion already created by lookup — just redirect
-    // Opening comment posting will be wired in E9
-    navigate(`/d/${discussionId}`)
+    setSubmitting(true)
+    setErrorMsg('')
+    try {
+      // Post opening comment if provided
+      if (openingComment.trim()) {
+        await postComment(discussionId, openingComment.trim())
+      }
+      navigate(`/d/${discussionId}`)
+    } catch (err) {
+      setErrorMsg(err.message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function handleSubmitManual(e) {

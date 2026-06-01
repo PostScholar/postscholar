@@ -75,12 +75,14 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
     }
 
     // Fetch one extra row to detect if a next page exists
+    // Join users to get username for display
     const topLevelResult = await pool.query(
-      `SELECT * FROM comments
-       WHERE discussion_id = $1
-         AND parent_comment_id IS NULL
-         ${cursor ? 'AND created_at > $3' : ''}
-       ORDER BY created_at ASC
+      `SELECT c.*, u.username FROM comments c
+       JOIN users u ON u.id = c.user_id
+       WHERE c.discussion_id = $1
+         AND c.parent_comment_id IS NULL
+         ${cursor ? 'AND c.created_at > $3' : ''}
+       ORDER BY c.created_at ASC
        LIMIT $2`,
       cursor ? [discussion_id, limit + 1, cursor] : [discussion_id, limit + 1]
     )
@@ -97,10 +99,12 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
       // Fetch all descendants of this page's top-level comments recursively
       const descendantsResult = await pool.query(
         `WITH RECURSIVE descendants AS (
-           SELECT * FROM comments
-           WHERE parent_comment_id = ANY($1::uuid[])
+           SELECT c.*, u.username FROM comments c
+           JOIN users u ON u.id = c.user_id
+           WHERE c.parent_comment_id = ANY($1::uuid[])
            UNION ALL
-           SELECT c.* FROM comments c
+           SELECT c.*, u.username FROM comments c
+           JOIN users u ON u.id = c.user_id
            INNER JOIN descendants d ON c.parent_comment_id = d.id
          )
          SELECT * FROM descendants ORDER BY created_at ASC`,
@@ -226,7 +230,7 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO comments (discussion_id, user_id, parent_comment_id, body, depth)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
+       RETURNING *, (SELECT username FROM users WHERE id = $2) AS username`,
       [discussion_id, req.user.userId, parent_comment_id || null, body.trim(), depth]
     )
 
@@ -334,6 +338,35 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     return res.json({ deleted: true })
   } catch (err) {
     console.error('DELETE /discussions/:id error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// GET /discussions/:id/paper
+// ---------------------------------------------------------------------------
+// Public (optionalAuth). Returns the paper associated with a discussion.
+// Used by the frontend Discussion page to get paper metadata from a
+// discussion ID — since the URL only contains the discussion UUID.
+// ---------------------------------------------------------------------------
+router.get('/:id/paper', optionalAuth, async (req, res) => {
+  try {
+    const { id: discussion_id } = req.params
+
+    const result = await pool.query(
+      `SELECT p.* FROM papers p
+       JOIN discussions d ON d.paper_id = p.id
+       WHERE d.id = $1`,
+      [discussion_id]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Discussion not found' })
+    }
+
+    return res.json({ paper: result.rows[0] })
+  } catch (err) {
+    console.error('GET /discussions/:id/paper error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

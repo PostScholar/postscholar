@@ -2,25 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import AuthorBadge from './AuthorBadge'
+import { postComment, editComment, deleteComment } from '../lib/api'
 import styles from './Comment.module.css'
 
 /**
  * Comment
  *
- * Renders a single comment with:
- * - Username + author badge + timestamp
- * - Body text
- * - Reply button (prompts login if not authenticated)
- * - Edit/delete for own comments
- * - Nested replies indented below
- *
- * Props:
- *   comment       — comment object with replies array
- *   discussionId  — for posting replies
- *   onReplyPosted — callback to update comment tree
- *   onEdited      — callback when comment body is updated
- *   onDeleted     — callback when comment is deleted
- *   depth         — current nesting depth (for indent)
+ * Renders a single comment with nested replies.
+ * All mutations (reply, edit, delete) are wired to real API endpoints.
  */
 
 function timeAgo(isoString) {
@@ -48,14 +37,14 @@ export default function Comment({
   const [replyOpen, setReplyOpen] = useState(false)
   const [replyBody, setReplyBody] = useState('')
   const [replyLoading, setReplyLoading] = useState(false)
+  const [replyError, setReplyError] = useState('')
 
   const [editing, setEditing] = useState(false)
   const [editBody, setEditBody] = useState(comment.body)
   const [editLoading, setEditLoading] = useState(false)
+  const [editError, setEditError] = useState('')
 
-  const isOwn = user && user.id === comment.user_id
-
-  // Indent capped visually at depth 6 to avoid extreme nesting
+  const isOwn = user && user.userId === comment.user_id
   const indentLevel = Math.min(depth, 6)
 
   function handleReplyClick() {
@@ -70,23 +59,14 @@ export default function Comment({
     e.preventDefault()
     if (!replyBody.trim()) return
     setReplyLoading(true)
+    setReplyError('')
     try {
-      // In E9 this will call POST /discussions/:id/comments
-      // For now we simulate with a mock reply
-      const mockReply = {
-        id: `mock-${Date.now()}`,
-        user_id: user.id,
-        username: user.username,
-        body: replyBody.trim(),
-        parent_comment_id: comment.id,
-        depth: comment.depth + 1,
-        created_at: new Date().toISOString(),
-        is_verified_author: false,
-        replies: [],
-      }
-      onReplyPosted(comment.id, mockReply)
+      const data = await postComment(discussionId, replyBody.trim(), comment.id)
+      onReplyPosted(comment.id, { ...data.comment, replies: [] })
       setReplyBody('')
       setReplyOpen(false)
+    } catch (err) {
+      setReplyError(err.message)
     } finally {
       setReplyLoading(false)
     }
@@ -96,24 +76,30 @@ export default function Comment({
     e.preventDefault()
     if (!editBody.trim()) return
     setEditLoading(true)
+    setEditError('')
     try {
-      // In E9 this will call PATCH /discussions/comments/:id
-      onEdited(comment.id, editBody.trim())
+      const data = await editComment(comment.id, editBody.trim())
+      onEdited(comment.id, data.comment.body)
       setEditing(false)
+    } catch (err) {
+      setEditError(err.message)
     } finally {
       setEditLoading(false)
     }
   }
 
   async function handleDelete() {
-    if (!window.confirm('Delete this comment?')) return
-    // In E9 this will call DELETE /discussions/comments/:id
-    onDeleted(comment.id)
+    if (!window.confirm('Delete this comment and all its replies?')) return
+    try {
+      await deleteComment(comment.id)
+      onDeleted(comment.id)
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
   return (
     <div className={styles.comment} style={{ '--indent': indentLevel }}>
-      {/* Thread line for nested comments */}
       {depth > 0 && <div className={styles.threadLine} />}
 
       <div className={styles.body}>
@@ -134,6 +120,7 @@ export default function Comment({
               rows={3}
               autoFocus
             />
+            {editError && <p className={styles.formError}>{editError}</p>}
             <div className={styles.editActions}>
               <button
                 type="button"
@@ -166,7 +153,10 @@ export default function Comment({
                 <button className={styles.actionBtn} onClick={() => setEditing(true)}>
                   Edit
                 </button>
-                <button className={`${styles.actionBtn} ${styles.deleteBtn}`} onClick={handleDelete}>
+                <button
+                  className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                  onClick={handleDelete}
+                >
                   Delete
                 </button>
               </>
@@ -185,6 +175,7 @@ export default function Comment({
               rows={3}
               autoFocus
             />
+            {replyError && <p className={styles.formError}>{replyError}</p>}
             <div className={styles.replyActions}>
               <button
                 type="button"

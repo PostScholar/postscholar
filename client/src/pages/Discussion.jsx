@@ -4,100 +4,112 @@ import Layout from '../components/Layout'
 import PaperHeader from '../components/PaperHeader'
 import CommentThread from '../components/CommentThread'
 import PaperSidebar from '../components/PaperSidebar'
+import { getPaperByDoi, getComments } from '../lib/api'
 import styles from './Discussion.module.css'
 
 /**
  * Discussion page — /d/:id
  *
- * Fetches the discussion by ID (which maps to a paper).
- * Left: paper header + comment thread
- * Right sidebar: paper stats + verification CTA
+ * The :id param is the discussion UUID. We need both the paper
+ * and the comments. The paper is fetched via the discussion's
+ * paper DOI — but we only have the discussion ID here.
  *
- * Uses mock data until E9 wires real endpoints.
+ * Strategy: fetch comments first (which gives us discussion context),
+ * then use a separate endpoint to get paper data. Since we store
+ * discussion_id on the paper lookup response, we pass the discussion
+ * ID to a backend route that returns paper + discussion in one call.
+ *
+ * For now we use GET /discussions/:id which we'll add to the backend,
+ * or we fetch the paper via a stored DOI. The cleanest approach for
+ * the frontend is a single GET /discussions/:id endpoint that returns
+ * { discussion, paper, comments }.
+ *
+ * Since that endpoint doesn't exist yet, we fetch comments (which
+ * works) and derive paper info from a parallel call to a new
+ * GET /discussions/:id/paper endpoint we add now.
  */
-
-const MOCK_DISCUSSION = {
-  id: '82cb0b8b-9772-43d0-a9e6-64f602f855bd',
-  paper: {
-    id: '4880e1f4-fa2a-4510-b492-f58d11fba113',
-    doi: '10.1145/3290605.3300651',
-    title: 'Analyzing the Use of Camera Glasses in the Wild',
-    authors_json: [
-      { given: 'Taryn', family: 'Bipat' },
-      { given: 'Maarten Willem', family: 'Bos' },
-      { given: 'Rajan', family: 'Vaish' },
-      { given: 'Andrés', family: 'Monroy-Hernández' },
-    ],
-    journal: 'Proceedings of the 2019 CHI Conference on Human Factors in Computing Systems',
-    year: 2019,
-    abstract: null,
-    source: 'crossref',
-  },
-  comment_count: 3,
-  created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-}
-
-const MOCK_COMMENTS = [
-  {
-    id: 'c1',
-    user_id: 'u1',
-    username: 'test1',
-    body: 'This is a fascinating paper. The methodology for tracking usage patterns in naturalistic settings is particularly interesting.',
-    parent_comment_id: null,
-    depth: 0,
-    created_at: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    is_verified_author: false,
-    replies: [
-      {
-        id: 'c2',
-        user_id: 'u2',
-        username: 'ummara',
-        body: 'Agreed — I especially liked how they handled privacy concerns in the data collection phase.',
-        parent_comment_id: 'c1',
-        depth: 1,
-        created_at: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-        is_verified_author: true,
-        replies: [],
-      }
-    ],
-  },
-  {
-    id: 'c3',
-    user_id: 'u3',
-    username: 'researcher99',
-    body: 'Has anyone looked at replication studies? I would be curious about cross-cultural comparisons.',
-    parent_comment_id: null,
-    depth: 0,
-    created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    is_verified_author: false,
-    replies: [],
-  },
-]
-
 export default function Discussion() {
-  const { id } = useParams()
-  const [discussion, setDiscussion] = useState(MOCK_DISCUSSION)
-  const [comments, setComments] = useState(MOCK_COMMENTS)
-  const [loading, setLoading] = useState(false)
+  const { id: discussionId } = useParams()
+  const navigate = useNavigate()
 
-  // In E9 this will fetch from /discussions/:id/comments
-  // and /papers/:doi via the discussion id
+  const [paper, setPaper] = useState(null)
+  const [comments, setComments] = useState([])
+  const [nextCursor, setNextCursor] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const sidebar = (
-    <PaperSidebar
-      paper={discussion.paper}
-      discussionId={discussion.id}
-    />
-  )
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      setError('')
+      try {
+        // Fetch paper info and comments in parallel
+        const [paperRes, commentsRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_API_URL}/discussions/${discussionId}/paper`, {
+            credentials: 'include'
+          }).then(r => r.json()),
+          getComments(discussionId)
+        ])
+
+        if (paperRes.error) {
+          setError(paperRes.error)
+          return
+        }
+
+        setPaper(paperRes.paper)
+        setComments(commentsRes.comments)
+        setNextCursor(commentsRes.next_cursor)
+      } catch (err) {
+        setError('Failed to load discussion')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
+  }, [discussionId])
+
+  async function loadMore() {
+    if (!nextCursor) return
+    try {
+      const res = await getComments(discussionId, nextCursor)
+      setComments(prev => [...prev, ...res.comments])
+      setNextCursor(res.next_cursor)
+    } catch (err) {
+      console.error('Failed to load more comments', err)
+    }
+  }
+
+  if (loading) {
+    return (
+      <Layout>
+        <p className={styles.loading}>Loading...</p>
+      </Layout>
+    )
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <p className={styles.error}>{error}</p>
+      </Layout>
+    )
+  }
+
+  const sidebar = paper ? (
+    <PaperSidebar paper={paper} discussionId={discussionId} />
+  ) : null
 
   return (
     <Layout sidebar={sidebar}>
-      <PaperHeader paper={discussion.paper} />
+      {paper && <PaperHeader paper={paper} />}
       <div className={styles.divider} />
       <CommentThread
-        discussionId={discussion.id}
+        discussionId={discussionId}
         comments={comments}
         setComments={setComments}
+        nextCursor={nextCursor}
+        onLoadMore={loadMore}
       />
     </Layout>
   )

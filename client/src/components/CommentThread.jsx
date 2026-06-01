@@ -2,49 +2,47 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Comment from './Comment'
+import { postComment } from '../lib/api'
 import styles from './CommentThread.module.css'
 
 /**
  * CommentThread
  *
- * Renders the full comment section for a discussion:
- * - Comment count header
- * - Top-level comment input (logged in only)
- * - List of comments with nested replies
- * - Load more button for pagination
+ * Renders the full comment section for a discussion.
+ * All API calls are wired to real endpoints.
  *
- * State management for adding/editing/deleting comments is
- * handled here and passed down to Comment components.
- *
- * In E9 all API calls will be wired to real endpoints.
+ * Props:
+ *   discussionId  — UUID of the discussion
+ *   comments      — current comment tree array
+ *   setComments   — state setter for updating the tree
+ *   nextCursor    — pagination cursor, null if no more pages
+ *   onLoadMore    — callback to fetch next page
  */
-export default function CommentThread({ discussionId, comments, setComments }) {
+export default function CommentThread({
+  discussionId,
+  comments,
+  setComments,
+  nextCursor,
+  onLoadMore
+}) {
   const { user } = useAuth()
   const navigate = useNavigate()
 
   const [newComment, setNewComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
-  // Add a new top-level comment
   async function handleCommentSubmit(e) {
     e.preventDefault()
     if (!newComment.trim()) return
     setSubmitting(true)
+    setError('')
     try {
-      // In E9: POST /discussions/:id/comments
-      const mockComment = {
-        id: `mock-${Date.now()}`,
-        user_id: user.id,
-        username: user.username,
-        body: newComment.trim(),
-        parent_comment_id: null,
-        depth: 0,
-        created_at: new Date().toISOString(),
-        is_verified_author: false,
-        replies: [],
-      }
-      setComments(prev => [...prev, mockComment])
+      const data = await postComment(discussionId, newComment.trim())
+      setComments(prev => [...prev, { ...data.comment, replies: [] }])
       setNewComment('')
+    } catch (err) {
+      setError(err.message)
     } finally {
       setSubmitting(false)
     }
@@ -66,7 +64,7 @@ export default function CommentThread({ discussionId, comments, setComments }) {
     setComments(prev => insertReply(prev))
   }
 
-  // Update comment body in tree
+  // Update comment body in the tree
   function handleEdited(commentId, newBody) {
     function updateBody(comments) {
       return comments.map(c => {
@@ -78,7 +76,7 @@ export default function CommentThread({ discussionId, comments, setComments }) {
     setComments(prev => updateBody(prev))
   }
 
-  // Remove comment from tree (also removes its replies via cascade)
+  // Remove comment and its replies from the tree
   function handleDeleted(commentId) {
     function removeComment(comments) {
       return comments
@@ -115,6 +113,7 @@ export default function CommentThread({ discussionId, comments, setComments }) {
             onChange={e => setNewComment(e.target.value)}
             rows={4}
           />
+          {error && <p className={styles.error}>{error}</p>}
           <div className={styles.formFooter}>
             <span className={styles.commentingAs}>
               Commenting as <strong>{user.username}</strong>
@@ -156,11 +155,17 @@ export default function CommentThread({ discussionId, comments, setComments }) {
           />
         ))}
       </div>
+
+      {/* Load more */}
+      {nextCursor && (
+        <button className={styles.loadMoreBtn} onClick={onLoadMore}>
+          Load more comments
+        </button>
+      )}
     </div>
   )
 }
 
-// Count all comments including nested replies
 function countAll(comments) {
   let count = 0
   for (const c of comments) {
