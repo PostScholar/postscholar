@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Comment from './Comment'
+import SortDropdown from './SortDropdown'
 import { postComment } from '../lib/api'
 import styles from './CommentThread.module.css'
 
@@ -9,21 +10,31 @@ import styles from './CommentThread.module.css'
  * CommentThread
  *
  * Renders the full comment section for a discussion.
- * All API calls are wired to real endpoints.
+ * Supports sort options: oldest, newest, top (most replied).
  *
  * Props:
- *   discussionId  — UUID of the discussion
- *   comments      — current comment tree array
- *   setComments   — state setter for updating the tree
- *   nextCursor    — pagination cursor, null if no more pages
- *   onLoadMore    — callback to fetch next page
+ *   discussionId  — UUID
+ *   comments      — current comment tree
+ *   setComments   — state setter
+ *   nextCursor    — pagination cursor
+ *   onLoadMore    — fetch next page callback
+ *   onSortChange  — called when sort changes so Discussion page can refetch
  */
+
+const COMMENT_SORT_OPTIONS = [
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'newest', label: 'Newest first' },
+  { value: 'top',    label: 'Most replied' },
+]
+
 export default function CommentThread({
   discussionId,
   comments,
   setComments,
   nextCursor,
-  onLoadMore
+  onLoadMore,
+  onSortChange,
+  currentSort = 'oldest',
 }) {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -48,23 +59,17 @@ export default function CommentThread({
     }
   }
 
-  // Insert a reply into the correct position in the tree
   function handleReplyPosted(parentId, reply) {
     function insertReply(comments) {
       return comments.map(c => {
-        if (c.id === parentId) {
-          return { ...c, replies: [...(c.replies || []), reply] }
-        }
-        if (c.replies?.length) {
-          return { ...c, replies: insertReply(c.replies) }
-        }
+        if (c.id === parentId) return { ...c, replies: [...(c.replies || []), reply] }
+        if (c.replies?.length) return { ...c, replies: insertReply(c.replies) }
         return c
       })
     }
     setComments(prev => insertReply(prev))
   }
 
-  // Update comment body in the tree
   function handleEdited(commentId, newBody) {
     function updateBody(comments) {
       return comments.map(c => {
@@ -76,15 +81,11 @@ export default function CommentThread({
     setComments(prev => updateBody(prev))
   }
 
-  // Remove comment and its replies from the tree
   function handleDeleted(commentId) {
     function removeComment(comments) {
       return comments
         .filter(c => c.id !== commentId)
-        .map(c => ({
-          ...c,
-          replies: c.replies ? removeComment(c.replies) : []
-        }))
+        .map(c => ({ ...c, replies: c.replies ? removeComment(c.replies) : [] }))
     }
     setComments(prev => removeComment(prev))
   }
@@ -93,7 +94,7 @@ export default function CommentThread({
 
   return (
     <div className={styles.thread}>
-      {/* Header */}
+      {/* Header with sort */}
       <div className={styles.header}>
         <h2 className={styles.heading}>
           {totalCount === 0
@@ -101,6 +102,13 @@ export default function CommentThread({
             : `${totalCount} comment${totalCount === 1 ? '' : 's'}`
           }
         </h2>
+        {totalCount > 0 && (
+          <SortDropdown
+            options={COMMENT_SORT_OPTIONS}
+            value={currentSort}
+            onChange={onSortChange}
+          />
+        )}
       </div>
 
       {/* New comment input */}
@@ -129,15 +137,10 @@ export default function CommentThread({
         </form>
       ) : (
         <div className={styles.anonPrompt}>
-          <span>
-            <button
-              className={styles.signInLink}
-              onClick={() => navigate('/login')}
-            >
-              Sign in
-            </button>
-            {' '}to join the discussion.
-          </span>
+          <button className={styles.signInLink} onClick={() => navigate('/login')}>
+            Sign in
+          </button>
+          {' '}to join the discussion.
         </div>
       )}
 
@@ -156,7 +159,6 @@ export default function CommentThread({
         ))}
       </div>
 
-      {/* Load more */}
       {nextCursor && (
         <button className={styles.loadMoreBtn} onClick={onLoadMore}>
           Load more comments

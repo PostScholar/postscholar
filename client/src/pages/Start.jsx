@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/Layout'
@@ -8,22 +8,68 @@ import styles from './Start.module.css'
 /**
  * Start a discussion page — /start
  *
- * Flow:
- *   1. User pastes a DOI
- *   2. We fetch paper metadata from the backend (POST /papers/lookup)
- *   3. If found: show paper preview + opening comment textarea
- *   4. If not found: show manual entry form
- *   5. Submit creates the discussion and redirects to /d/:id
+ * Two-step flow:
+ *   1. POST /papers/lookup — fetches paper metadata only, no discussion created
+ *   2. POST /discussions   — creates discussion with topics + custom tags on submit
  *
- * Status: idle | loading | found | not_found | error
+ * This ensures a discussion is only created when the user commits.
  */
 
-const EMPTY_MANUAL = {
-  title: '',
-  authors: '',
-  journal: '',
-  year: '',
-  abstract: '',
+const EMPTY_MANUAL = { title: '', authors: '', journal: '', year: '', abstract: '' }
+
+function TopicPicker({ allTopics, selectedTopicIds, toggleTopic }) {
+  return (
+    <div className={styles.field}>
+      <label className={styles.label}>
+        Topics <span className={styles.optional}>(optional)</span>
+      </label>
+      <p className={styles.hint}>Select any that apply.</p>
+      <div className={styles.topicGrid}>
+        {allTopics.map(parent => (
+          <div key={parent.slug} className={styles.topicGroup}>
+            <div className={styles.topicGroupLabel}>{parent.name}</div>
+            <div className={styles.topicChips}>
+              {(parent.children || []).map(child => (
+                <button
+                  key={child.id}
+                  type="button"
+                  className={`${styles.topicChip} ${selectedTopicIds.includes(child.id) ? styles.topicChipSelected : ''}`}
+                  onClick={() => toggleTopic(child.id)}
+                >
+                  {child.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CustomTagInput({ customTagInput, setCustomTagInput, parseCustomTags }) {
+  return (
+    <div className={styles.field}>
+      <label className={styles.label}>
+        Custom tags <span className={styles.optional}>(optional)</span>
+      </label>
+      <p className={styles.hint}>Comma-separated. e.g. transformer, few-shot learning, NLP</p>
+      <input
+        className={styles.input}
+        type="text"
+        placeholder="e.g. deep learning, transformers"
+        value={customTagInput}
+        onChange={e => setCustomTagInput(e.target.value)}
+      />
+      {parseCustomTags().length > 0 && (
+        <div className={styles.tagPreview}>
+          {parseCustomTags().map(tag => (
+            <span key={tag} className={styles.tagPill}>{tag}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function Start() {
@@ -31,19 +77,37 @@ export default function Start() {
   const navigate = useNavigate()
 
   const [doi, setDoi] = useState('')
-  const [status, setStatus] = useState('idle') // idle | loading | found | not_found | error
+  const [status, setStatus] = useState('idle')
   const [paper, setPaper] = useState(null)
-  const [discussionId, setDiscussionId] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
-
   const [manual, setManual] = useState(EMPTY_MANUAL)
   const [openingComment, setOpeningComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // Redirect to login if not authenticated
+  const [allTopics, setAllTopics] = useState([])
+  const [selectedTopicIds, setSelectedTopicIds] = useState([])
+  const [customTagInput, setCustomTagInput] = useState('')
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/topics`)
+      .then(r => r.json())
+      .then(data => setAllTopics(data.topics || []))
+      .catch(() => {})
+  }, [])
+
   if (!user) {
     navigate('/login')
     return null
+  }
+
+  function parseCustomTags() {
+    return customTagInput.split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0)
+  }
+
+  function toggleTopic(id) {
+    setSelectedTopicIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
   }
 
   async function handleLookup(e) {
@@ -52,6 +116,8 @@ export default function Start() {
     setStatus('loading')
     setErrorMsg('')
     setPaper(null)
+    setSelectedTopicIds([])
+    setCustomTagInput('')
 
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/papers/lookup`, {
@@ -62,27 +128,19 @@ export default function Start() {
       })
       const data = await res.json()
 
-      if (!res.ok) {
-        setStatus('error')
-        setErrorMsg(data.error || 'Something went wrong')
-        return
-      }
+      if (!res.ok) { setStatus('error'); setErrorMsg(data.error || 'Something went wrong'); return }
+      if (!data.found) { setStatus('not_found'); return }
 
-      if (!data.found) {
-        setStatus('not_found')
-        return
-      }
-
-      // Paper found — if discussion already existed, redirect immediately
-      if (data.existed) {
+      // If a discussion already exists for this paper, redirect immediately
+      if (data.existed && data.discussion_id) {
         navigate(`/d/${data.discussion_id}`)
         return
       }
 
+      // Paper found or newly fetched — show form, do NOT create discussion yet
       setPaper(data.paper)
-      setDiscussionId(data.discussion_id)
       setStatus('found')
-    } catch (err) {
+    } catch {
       setStatus('error')
       setErrorMsg('Failed to reach server')
     }
@@ -93,11 +151,28 @@ export default function Start() {
     setSubmitting(true)
     setErrorMsg('')
     try {
-      // Post opening comment if provided
+      // Step 1: Create the discussion now that user has committed
+      const discussionRes = await fetch(`${import.meta.env.VITE_API_URL}/discussions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          paper_id: paper.id,
+          topics: selectedTopicIds,
+          custom_tags: parseCustomTags()
+        })
+      })
+      const discussionData = await discussionRes.json()
+      if (!discussionRes.ok) throw new Error(discussionData.error || 'Failed to create discussion')
+
+      const discussion_id = discussionData.discussion_id
+
+      // Step 2: Post opening comment if provided
       if (openingComment.trim()) {
-        await postComment(discussionId, openingComment.trim())
+        await postComment(discussion_id, openingComment.trim())
       }
-      navigate(`/d/${discussionId}`)
+
+      navigate(`/d/${discussion_id}`)
     } catch (err) {
       setErrorMsg(err.message)
     } finally {
@@ -110,11 +185,43 @@ export default function Start() {
     setSubmitting(true)
     setErrorMsg('')
     try {
-      // In E9: POST /papers/lookup with manual data
-      // For now navigate to home
-      navigate('/')
+      // First create the paper manually
+      const paperRes = await fetch(`${import.meta.env.VITE_API_URL}/papers/manual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: manual.title,
+          authors: manual.authors,
+          journal: manual.journal,
+          year: manual.year ? parseInt(manual.year) : null,
+          abstract: manual.abstract
+        })
+      })
+      const paperData = await paperRes.json()
+      if (!paperRes.ok) throw new Error(paperData.error || 'Failed to create paper')
+
+      // Then create the discussion
+      const discussionRes = await fetch(`${import.meta.env.VITE_API_URL}/discussions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          paper_id: paperData.paper.id,
+          topics: selectedTopicIds,
+          custom_tags: parseCustomTags()
+        })
+      })
+      const discussionData = await discussionRes.json()
+      if (!discussionRes.ok) throw new Error(discussionData.error || 'Failed to create discussion')
+
+      if (openingComment.trim()) {
+        await postComment(discussionData.discussion_id, openingComment.trim())
+      }
+
+      navigate(`/d/${discussionData.discussion_id}`)
     } catch (err) {
-      setErrorMsg('Failed to create discussion')
+      setErrorMsg(err.message)
     } finally {
       setSubmitting(false)
     }
@@ -131,11 +238,11 @@ export default function Start() {
         <div className={styles.header}>
           <h1 className={styles.heading}>Start a discussion</h1>
           <p className={styles.subheading}>
-            Paste a DOI to find the paper. If it isn't in CrossRef, you can enter it manually.
+            Paste a DOI to find the paper. If it isn't in CrossRef, enter it manually.
           </p>
         </div>
 
-        {/* DOI lookup form */}
+        {/* DOI lookup */}
         <form className={styles.doiForm} onSubmit={handleLookup}>
           <div className={styles.doiRow}>
             <input
@@ -156,28 +263,33 @@ export default function Start() {
           </div>
         </form>
 
-        {/* Error */}
-        {status === 'error' && (
-          <p className={styles.error}>{errorMsg}</p>
-        )}
+        {status === 'error' && <p className={styles.error}>{errorMsg}</p>}
 
-        {/* Found — paper preview */}
+        {/* Found — paper preview + tagging */}
         {status === 'found' && paper && (
           <form className={styles.foundForm} onSubmit={handleSubmitFound}>
             <div className={styles.paperPreview}>
               <div className={styles.previewBadge}>Paper found</div>
               <h2 className={`${styles.previewTitle} paper-title`}>{paper.title}</h2>
               <div className={styles.previewMeta}>
-                {formatAuthors(paper.authors_json) && (
-                  <span>{formatAuthors(paper.authors_json)}</span>
-                )}
+                {formatAuthors(paper.authors_json) && <span>{formatAuthors(paper.authors_json)}</span>}
                 {paper.journal && <span>{paper.journal}</span>}
                 {paper.year && <span>{paper.year}</span>}
               </div>
-              {paper.abstract && (
-                <p className={styles.previewAbstract}>{paper.abstract}</p>
-              )}
+              {paper.abstract && <p className={styles.previewAbstract}>{paper.abstract}</p>}
             </div>
+
+            <TopicPicker
+              allTopics={allTopics}
+              selectedTopicIds={selectedTopicIds}
+              toggleTopic={toggleTopic}
+            />
+
+            <CustomTagInput
+              customTagInput={customTagInput}
+              setCustomTagInput={setCustomTagInput}
+              parseCustomTags={parseCustomTags}
+            />
 
             <div className={styles.field}>
               <label className={styles.label}>
@@ -185,23 +297,22 @@ export default function Start() {
               </label>
               <textarea
                 className={styles.textarea}
-                placeholder="Share your thoughts on this paper to kick off the discussion..."
+                placeholder="Share your thoughts to kick off the discussion..."
                 value={openingComment}
                 onChange={e => setOpeningComment(e.target.value)}
                 rows={5}
               />
             </div>
 
+            {errorMsg && <p className={styles.error}>{errorMsg}</p>}
+
             <div className={styles.formFooter}>
-              <button
-                type="button"
-                className={styles.cancelBtn}
-                onClick={() => { setStatus('idle'); setPaper(null); setDoi('') }}
-              >
+              <button type="button" className={styles.cancelBtn}
+                onClick={() => { setStatus('idle'); setPaper(null); setDoi('') }}>
                 Start over
               </button>
-              <button type="submit" className={styles.submitBtn}>
-                Start discussion
+              <button type="submit" className={styles.submitBtn} disabled={submitting}>
+                {submitting ? 'Starting...' : 'Start discussion'}
               </button>
             </div>
           </form>
@@ -216,87 +327,60 @@ export default function Start() {
 
             <div className={styles.field}>
               <label className={styles.label}>Title <span className={styles.required}>*</span></label>
-              <input
-                className={styles.input}
-                type="text"
-                required
-                value={manual.title}
-                onChange={e => setManual(m => ({ ...m, title: e.target.value }))}
-              />
+              <input className={styles.input} type="text" required
+                value={manual.title} onChange={e => setManual(m => ({ ...m, title: e.target.value }))} />
             </div>
 
             <div className={styles.field}>
               <label className={styles.label}>Authors</label>
-              <input
-                className={styles.input}
-                type="text"
-                placeholder="e.g. Jane Smith, John Doe"
-                value={manual.authors}
-                onChange={e => setManual(m => ({ ...m, authors: e.target.value }))}
-              />
+              <input className={styles.input} type="text" placeholder="e.g. Jane Smith, John Doe"
+                value={manual.authors} onChange={e => setManual(m => ({ ...m, authors: e.target.value }))} />
             </div>
 
             <div className={styles.twoCol}>
               <div className={styles.field}>
                 <label className={styles.label}>Journal / venue</label>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={manual.journal}
-                  onChange={e => setManual(m => ({ ...m, journal: e.target.value }))}
-                />
+                <input className={styles.input} type="text"
+                  value={manual.journal} onChange={e => setManual(m => ({ ...m, journal: e.target.value }))} />
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Year</label>
-                <input
-                  className={styles.input}
-                  type="number"
-                  min="1900"
-                  max={new Date().getFullYear()}
-                  value={manual.year}
-                  onChange={e => setManual(m => ({ ...m, year: e.target.value }))}
-                />
+                <input className={styles.input} type="number" min="1900" max={new Date().getFullYear()}
+                  value={manual.year} onChange={e => setManual(m => ({ ...m, year: e.target.value }))} />
               </div>
             </div>
 
             <div className={styles.field}>
               <label className={styles.label}>Abstract <span className={styles.optional}>(optional)</span></label>
-              <textarea
-                className={styles.textarea}
-                rows={4}
-                value={manual.abstract}
-                onChange={e => setManual(m => ({ ...m, abstract: e.target.value }))}
-              />
+              <textarea className={styles.textarea} rows={4}
+                value={manual.abstract} onChange={e => setManual(m => ({ ...m, abstract: e.target.value }))} />
             </div>
 
+            <TopicPicker
+              allTopics={allTopics}
+              selectedTopicIds={selectedTopicIds}
+              toggleTopic={toggleTopic}
+            />
+
+            <CustomTagInput
+              customTagInput={customTagInput}
+              setCustomTagInput={setCustomTagInput}
+              parseCustomTags={parseCustomTags}
+            />
+
             <div className={styles.field}>
-              <label className={styles.label}>
-                Opening comment <span className={styles.optional}>(optional)</span>
-              </label>
-              <textarea
-                className={styles.textarea}
-                placeholder="Share your thoughts on this paper..."
-                value={openingComment}
-                onChange={e => setOpeningComment(e.target.value)}
-                rows={4}
-              />
+              <label className={styles.label}>Opening comment <span className={styles.optional}>(optional)</span></label>
+              <textarea className={styles.textarea} rows={4}
+                placeholder="Share your thoughts..."
+                value={openingComment} onChange={e => setOpeningComment(e.target.value)} />
             </div>
 
             {errorMsg && <p className={styles.error}>{errorMsg}</p>}
 
             <div className={styles.formFooter}>
-              <button
-                type="button"
-                className={styles.cancelBtn}
-                onClick={() => { setStatus('idle'); setDoi('') }}
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                className={styles.submitBtn}
-                disabled={submitting}
-              >
+              <button type="button" className={styles.cancelBtn}
+                onClick={() => { setStatus('idle'); setDoi('') }}>Back</button>
+              <button type="submit" className={styles.submitBtn} disabled={submitting}>
                 {submitting ? 'Creating...' : 'Start discussion'}
               </button>
             </div>

@@ -63,6 +63,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
   try {
     const { id: discussion_id } = req.params
     const cursor = req.query.cursor || null
+    const sort = req.query.sort || 'oldest' // oldest | newest | top
     const limit = 20
 
     // Confirm the discussion exists
@@ -74,6 +75,30 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'Discussion not found' })
     }
 
+    // Determine ORDER BY for top-level comments based on sort param.
+    // 'top' sorts by direct reply count — cursor pagination not supported for this sort.
+    let orderClause
+    let cursorOp
+    switch (sort) {
+      case 'newest':
+        orderClause = 'ORDER BY c.created_at DESC'
+        cursorOp = '<'
+        break
+      case 'top':
+        orderClause = `ORDER BY (
+          SELECT COUNT(*) FROM comments r WHERE r.parent_comment_id = c.id
+        ) DESC, c.created_at ASC`
+        cursorOp = null
+        break
+      case 'oldest':
+      default:
+        orderClause = 'ORDER BY c.created_at ASC'
+        cursorOp = '>'
+        break
+    }
+
+    const useCursor = cursor && cursorOp !== null
+
     // Fetch one extra row to detect if a next page exists
     // Join users to get username for display
     const topLevelResult = await pool.query(
@@ -81,10 +106,10 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
        JOIN users u ON u.id = c.user_id
        WHERE c.discussion_id = $1
          AND c.parent_comment_id IS NULL
-         ${cursor ? 'AND c.created_at > $3' : ''}
-       ORDER BY c.created_at ASC
+         ${useCursor ? `AND c.created_at ${cursorOp} $3` : ''}
+       ${orderClause}
        LIMIT $2`,
-      cursor ? [discussion_id, limit + 1, cursor] : [discussion_id, limit + 1]
+      useCursor ? [discussion_id, limit + 1, cursor] : [discussion_id, limit + 1]
     )
 
     const topLevelRows = topLevelResult.rows
@@ -354,8 +379,14 @@ router.get('/:id/paper', optionalAuth, async (req, res) => {
     const { id: discussion_id } = req.params
 
     const result = await pool.query(
-      `SELECT p.* FROM papers p
+      `SELECT p.*,
+              d.id AS discussion_id,
+              d.created_at AS discussion_created_at,
+              d.custom_tags,
+              u.username AS started_by
+       FROM papers p
        JOIN discussions d ON d.paper_id = p.id
+       LEFT JOIN users u ON u.id = d.created_by
        WHERE d.id = $1`,
       [discussion_id]
     )
@@ -364,9 +395,99 @@ router.get('/:id/paper', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'Discussion not found' })
     }
 
-    return res.json({ paper: result.rows[0] })
+    const row = result.rows[0]
+    return res.json({
+      paper: {
+        id: row.id, doi: row.doi, title: row.title,
+        authors_json: row.authors_json, journal: row.journal,
+        year: row.year, abstract: row.abstract,
+        source: row.source, created_at: row.created_at
+      },
+      discussion_id: row.discussion_id,
+      discussion_created_at: row.discussion_created_at,
+      custom_tags: row.custom_tags,
+      started_by: row.started_by
+    })
   } catch (err) {
     console.error('GET /discussions/:id/paper error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+
+// ---------------------------------------------------------------------------
+// POST /discussions
+// ---------------------------------------------------------------------------
+// Protected. Creates a new discussion for a paper.
+// Called by the Start page after the user reviews the paper and clicks
+// "Start discussion". This is separate from POST /papers/lookup so that
+// the discussion is only created when the user actually commits.
+//
+// Body params:
+//   paper_id    (UUID, required)  — the paper to discuss
+//   topics      (UUID[], optional) — topic IDs from the taxonomy
+//   custom_tags (string[], optional) — free-text tags
+// ---------------------------------------------------------------------------
+router.post('/', authenticateToken, async (req, res) => {
+  try {
+    const { paper_id, topics = [], custom_tags = [] } = req.body
+
+    if (!paper_id) {
+      return res.status(400).json({ error: 'paper_id is required' })
+    }
+
+    // Confirm the paper exists
+    const paperCheck = await pool.query(
+      'SELECT id FROM papers WHERE id = $1',
+      [paper_id]
+    )
+    if (paperCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Paper not found' })
+    }
+
+    // Check if a discussion already exists for this paper
+    const existing = await pool.query(
+      'SELECT id FROM discussions WHERE paper_id = $1',
+      [paper_id]
+    )
+    if (existing.rows.length > 0) {
+      return res.json({ existed: true, discussion_id: existing.rows[0].id })
+    }
+
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      // Create the discussion
+      const discussionResult = await client.query(
+        `INSERT INTO discussions (paper_id, created_by, custom_tags)
+         VALUES ($1, $2, $3)
+         RETURNING id`,
+        [paper_id, req.user.userId, JSON.stringify(custom_tags)]
+      )
+      const discussion_id = discussionResult.rows[0].id
+
+      // Insert topic associations
+      for (const topic_id of topics) {
+        await client.query(
+          `INSERT INTO discussion_topics (discussion_id, topic_id)
+           VALUES ($1, $2)
+           ON CONFLICT DO NOTHING`,
+          [discussion_id, topic_id]
+        )
+      }
+
+      await client.query('COMMIT')
+
+      return res.status(201).json({ existed: false, discussion_id })
+    } catch (err) {
+      await client.query('ROLLBACK')
+      throw err
+    } finally {
+      client.release()
+    }
+  } catch (err) {
+    console.error('POST /discussions error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

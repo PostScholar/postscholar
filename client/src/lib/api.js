@@ -54,8 +54,11 @@ export function getPaperByDoi(doi) {
  * Fetch paginated comments for a discussion.
  * Returns { comments, next_cursor }
  */
-export function getComments(discussionId, cursor = null) {
-  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
+export function getComments(discussionId, cursor = null, sort = 'oldest') {
+  const params = new URLSearchParams()
+  if (cursor) params.set('cursor', cursor)
+  if (sort && sort !== 'oldest') params.set('sort', sort)
+  const query = params.toString() ? `?${params.toString()}` : ''
   return api.get(`/discussions/${discussionId}/comments${query}`)
 }
 

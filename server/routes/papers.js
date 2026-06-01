@@ -4,28 +4,30 @@ const pool = require('../db')
 const authenticateToken = require('../middleware/authenticateToken')
 const optionalAuth = require('../middleware/optionalAuth')
 
-// Strip JATS XML tags from CrossRef abstracts
+/**
+ * stripJats(text)
+ * Strips JATS XML tags from CrossRef abstracts.
+ */
 function stripJats(text) {
   if (!text) return null
   return text.replace(/<[^>]+>/g, '').trim()
 }
 
-// Normalize raw CrossRef work object into our schema shape
+/**
+ * normalizeCrossRef(work)
+ * Normalizes the raw CrossRef API response into our schema shape.
+ * Handles missing fields, array-wrapped values, and JATS XML.
+ */
 function normalizeCrossRef(work) {
   const title = Array.isArray(work.title) && work.title.length > 0
-    ? work.title[0]
-    : null
+    ? work.title[0] : null
 
   const authors = Array.isArray(work.author)
-    ? work.author.map(a => ({
-        given: a.given || null,
-        family: a.family || null
-      }))
+    ? work.author.map(a => ({ given: a.given || null, family: a.family || null }))
     : []
 
   const journal = Array.isArray(work['container-title']) && work['container-title'].length > 0
-    ? work['container-title'][0]
-    : null
+    ? work['container-title'][0] : null
 
   let year = null
   if (work['published-print']?.['date-parts']?.[0]?.[0]) {
@@ -37,12 +39,27 @@ function normalizeCrossRef(work) {
   }
 
   const abstract = stripJats(work.abstract || null)
-
   return { title, authors, journal, year, abstract }
 }
 
+// ---------------------------------------------------------------------------
 // POST /papers/lookup
-// Requires login. Takes a DOI, fetches from CrossRef, stores paper + discussion.
+// ---------------------------------------------------------------------------
+// Protected. Looks up a DOI — fetches from CrossRef if not in DB, stores the
+// paper, and returns paper data.
+//
+// IMPORTANT: This endpoint no longer creates a discussion. Discussion creation
+// is handled separately by POST /discussions. This allows the user to review
+// the paper and select topics before the discussion is created.
+//
+// Response shapes:
+//   { found: true, existed: true,  paper }  — paper already in DB
+//   { found: true, existed: false, paper }  — newly fetched from CrossRef
+//   { found: false }                         — not on CrossRef
+//
+// If a discussion already exists for this paper, discussion_id is included
+// so the client can redirect directly.
+// ---------------------------------------------------------------------------
 router.post('/lookup', authenticateToken, async (req, res) => {
   try {
     let { doi } = req.body
@@ -52,121 +69,83 @@ router.post('/lookup', authenticateToken, async (req, res) => {
 
     doi = doi.trim().toLowerCase()
 
-    // If paper already exists return it with its discussion
-    const existing = await pool.query(
-      `SELECT p.*, d.id AS discussion_id
-       FROM papers p
-       JOIN discussions d ON d.paper_id = p.id
-       WHERE p.doi = $1`,
+    // Check if paper already exists
+    const existingPaper = await pool.query(
+      'SELECT * FROM papers WHERE doi = $1',
       [doi]
     )
-    if (existing.rows.length > 0) {
-      const row = existing.rows[0]
+
+    if (existingPaper.rows.length > 0) {
+      const paper = existingPaper.rows[0]
+
+      // Check if a discussion already exists for this paper
+      const existingDiscussion = await pool.query(
+        'SELECT id FROM discussions WHERE paper_id = $1',
+        [paper.id]
+      )
+
       return res.json({
         found: true,
         existed: true,
-        paper: {
-          id: row.id,
-          doi: row.doi,
-          title: row.title,
-          authors_json: row.authors_json,
-          journal: row.journal,
-          year: row.year,
-          abstract: row.abstract,
-          source: row.source,
-          created_at: row.created_at
-        },
-        discussion_id: row.discussion_id
+        paper,
+        // If discussion exists, include its ID so client can redirect
+        discussion_id: existingDiscussion.rows[0]?.id || null
       })
     }
 
-    // Fetch from CrossRef
+    // Fetch from CrossRef — server-side only
     const crossrefUrl = `https://api.crossref.org/works/${encodeURIComponent(doi)}`
     const crossrefRes = await fetch(crossrefUrl, {
-      headers: {
-        'User-Agent': 'PostScholar/1.0 (mailto:hello@postscholar.org)'
-      }
+      headers: { 'User-Agent': 'PostScholar/1.0 (mailto:hello@postscholar.org)' }
     })
 
-    if (crossrefRes.status === 404) {
-      return res.json({ found: false })
-    }
-
-    if (!crossrefRes.ok) {
-      return res.status(502).json({ error: 'CrossRef request failed' })
-    }
+    if (crossrefRes.status === 404) return res.json({ found: false })
+    if (!crossrefRes.ok) return res.status(502).json({ error: 'CrossRef request failed' })
 
     const crossrefData = await crossrefRes.json()
     const work = crossrefData?.message
-    if (!work) {
-      return res.json({ found: false })
-    }
+    if (!work) return res.json({ found: false })
 
     const { title, authors, journal, year, abstract } = normalizeCrossRef(work)
+    if (!title) return res.json({ found: false })
 
-    if (!title) {
-      return res.json({ found: false })
-    }
+    // Store the paper (no discussion created yet)
+    const paperResult = await pool.query(
+      `INSERT INTO papers (doi, title, authors_json, journal, year, abstract, source)
+       VALUES ($1, $2, $3, $4, $5, $6, 'crossref')
+       RETURNING *`,
+      [doi, title, JSON.stringify(authors), journal, year, abstract]
+    )
 
-    // Insert paper and discussion in a transaction
-    const client = await pool.connect()
-    try {
-      await client.query('BEGIN')
-
-      const paperResult = await client.query(
-        `INSERT INTO papers (doi, title, authors_json, journal, year, abstract, source)
-         VALUES ($1, $2, $3, $4, $5, $6, 'crossref')
-         RETURNING *`,
-        [doi, title, JSON.stringify(authors), journal, year, abstract]
-      )
-      const paper = paperResult.rows[0]
-
-      const discussionResult = await client.query(
-        `INSERT INTO discussions (paper_id, created_by)
-         VALUES ($1, $2)
-         RETURNING id`,
-        [paper.id, req.user.userId]
-      )
-      const discussion_id = discussionResult.rows[0].id
-
-      await client.query('COMMIT')
-
-      return res.status(201).json({
-        found: true,
-        existed: false,
-        paper,
-        discussion_id
-      })
-    } catch (err) {
-      await client.query('ROLLBACK')
-      throw err
-    } finally {
-      client.release()
-    }
+    return res.status(201).json({
+      found: true,
+      existed: false,
+      paper: paperResult.rows[0]
+    })
   } catch (err) {
     console.error('POST /papers/lookup error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
 
+// ---------------------------------------------------------------------------
 // GET /papers/*doi
-// Public. Returns paper + discussion ID by DOI.
-// Wildcard needed because DOIs contain slashes.
-// Express 5 splits on each / and returns an array, so we join with /
+// ---------------------------------------------------------------------------
+// Public (optionalAuth). Returns a paper and its discussion ID by DOI.
+// DOIs contain slashes — Express 5 wildcard splits them into an array.
+// ---------------------------------------------------------------------------
 router.get('/*doi', optionalAuth, async (req, res) => {
   try {
     const doi = Array.isArray(req.params.doi)
       ? req.params.doi.join('/').trim().toLowerCase()
       : req.params.doi?.toString().trim().toLowerCase()
 
-    if (!doi) {
-      return res.status(400).json({ error: 'doi is required' })
-    }
+    if (!doi) return res.status(400).json({ error: 'doi is required' })
 
     const result = await pool.query(
       `SELECT p.*, d.id AS discussion_id
        FROM papers p
-       JOIN discussions d ON d.paper_id = p.id
+       LEFT JOIN discussions d ON d.paper_id = p.id
        WHERE p.doi = $1`,
       [doi]
     )
@@ -178,15 +157,10 @@ router.get('/*doi', optionalAuth, async (req, res) => {
     const row = result.rows[0]
     return res.json({
       paper: {
-        id: row.id,
-        doi: row.doi,
-        title: row.title,
-        authors_json: row.authors_json,
-        journal: row.journal,
-        year: row.year,
-        abstract: row.abstract,
-        source: row.source,
-        created_at: row.created_at
+        id: row.id, doi: row.doi, title: row.title,
+        authors_json: row.authors_json, journal: row.journal,
+        year: row.year, abstract: row.abstract,
+        source: row.source, created_at: row.created_at
       },
       discussion_id: row.discussion_id
     })
@@ -196,5 +170,51 @@ router.get('/*doi', optionalAuth, async (req, res) => {
   }
 })
 
-module.exports = router
 
+// ---------------------------------------------------------------------------
+// POST /papers/manual
+// ---------------------------------------------------------------------------
+// Protected. Creates a paper from manually entered data when CrossRef
+// returns no results. Authors are stored as a simple array of name strings
+// parsed from a comma-separated input.
+// ---------------------------------------------------------------------------
+router.post('/manual', authenticateToken, async (req, res) => {
+  try {
+    const { title, authors, journal, year, abstract } = req.body
+
+    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+      return res.status(400).json({ error: 'title is required' })
+    }
+
+    // Parse authors string "Jane Smith, John Doe" into authors_json array
+    const authors_json = authors
+      ? authors.split(',').map(a => {
+          const parts = a.trim().split(' ')
+          const family = parts.pop() || ''
+          const given = parts.join(' ')
+          return { given: given || null, family: family || null }
+        })
+      : []
+
+    const result = await pool.query(
+      `INSERT INTO papers (doi, title, authors_json, journal, year, abstract, source)
+       VALUES ($1, $2, $3, $4, $5, $6, 'manual')
+       RETURNING *`,
+      [
+        null, // no DOI for manual entries
+        title.trim(),
+        JSON.stringify(authors_json),
+        journal?.trim() || null,
+        year ? parseInt(year) : null,
+        abstract?.trim() || null
+      ]
+    )
+
+    return res.status(201).json({ paper: result.rows[0] })
+  } catch (err) {
+    console.error('POST /papers/manual error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+module.exports = router

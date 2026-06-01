@@ -1,121 +1,151 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
 import FeedCard from '../components/FeedCard'
+import TopicDropdown from '../components/TopicDropdown'
+import SortDropdown from '../components/SortDropdown'
 import styles from './Home.module.css'
 
 /**
- * Mock data — replaced with real API calls in E9
+ * Home — feed page at /
+ *
+ * Fetches real discussions from GET /explore.
+ * Supports filter tabs, topic filter, and sort options.
  */
-const MOCK_DISCUSSIONS = [
-  {
-    id: '1',
-    paper: {
-      title: 'Attention Is All You Need',
-      authors: [{ given: 'Ashish', family: 'Vaswani' }, { given: 'Noam', family: 'Shazeer' }],
-      journal: 'Advances in Neural Information Processing Systems',
-      year: 2017,
-    },
-    comment_count: 24,
-    last_activity: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 min ago
-  },
-  {
-    id: '2',
-    paper: {
-      title: 'Deep Residual Learning for Image Recognition',
-      authors: [{ given: 'Kaiming', family: 'He' }, { given: 'Xiangyu', family: 'Zhang' }],
-      journal: 'CVPR',
-      year: 2016,
-    },
-    comment_count: 11,
-    last_activity: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3 hrs ago
-  },
-  {
-    id: '3',
-    paper: {
-      title: 'BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding',
-      authors: [{ given: 'Jacob', family: 'Devlin' }, { given: 'Ming-Wei', family: 'Chang' }],
-      journal: 'NAACL',
-      year: 2019,
-    },
-    comment_count: 0,
-    last_activity: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
-  },
-  {
-    id: '4',
-    paper: {
-      title: 'An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale',
-      authors: [{ given: 'Alexey', family: 'Dosovitskiy' }],
-      journal: 'ICLR',
-      year: 2021,
-    },
-    comment_count: 7,
-    last_activity: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-  },
-  {
-    id: '5',
-    paper: {
-      title: 'Language Models are Few-Shot Learners',
-      authors: [{ given: 'Tom', family: 'Brown' }, { given: 'Benjamin', family: 'Mann' }],
-      journal: 'NeurIPS',
-      year: 2020,
-    },
-    comment_count: 0,
-    last_activity: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-  },
-  {
-    id: '6',
-    paper: {
-      title: 'Generative Adversarial Networks',
-      authors: [{ given: 'Ian', family: 'Goodfellow' }, { given: 'Jean', family: 'Pouget-Abadie' }],
-      journal: 'NeurIPS',
-      year: 2014,
-    },
-    comment_count: 18,
-    last_activity: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-  },
+
+const FILTERS = ['All', 'Unanswered', 'New']
+
+const SORT_OPTIONS = [
+  { value: 'recent',       label: 'Most active' },
+  { value: 'new',          label: 'Newest discussion' },
+  { value: 'oldest',       label: 'Oldest discussion' },
+  { value: 'pub_date_desc', label: 'Publication date ↓' },
+  { value: 'pub_date_asc',  label: 'Publication date ↑' },
 ]
 
-const TABS = ['Recent', 'Unanswered']
-
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('Recent')
+  const [discussions, setDiscussions] = useState([])
+  const [topics, setTopics] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState('')
+  const [nextCursor, setNextCursor] = useState(null)
 
-  const filtered = activeTab === 'Unanswered'
-    ? MOCK_DISCUSSIONS.filter(d => d.comment_count === 0)
-    : MOCK_DISCUSSIONS
+  const [activeFilter, setActiveFilter] = useState('All')
+  const [activeTopic, setActiveTopic] = useState('')
+  const [activeSort, setActiveSort] = useState('recent')
+
+  // Fetch topics once on mount
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/topics`)
+      .then(r => r.json())
+      .then(data => setTopics(data.topics || []))
+      .catch(() => {})
+  }, [])
+
+  // Refetch when filter, topic, or sort changes
+  useEffect(() => {
+    fetchDiscussions(true)
+  }, [activeFilter, activeTopic, activeSort])
+
+  async function fetchDiscussions(reset = false, cursor = null) {
+    if (reset) setLoading(true)
+    else setLoadingMore(true)
+    setError('')
+
+    try {
+      const params = new URLSearchParams()
+      if (activeFilter !== 'All') params.set('filter', activeFilter.toLowerCase())
+      if (activeTopic) params.set('topic', activeTopic)
+      if (activeSort) params.set('sort', activeSort)
+      if (cursor) params.set('cursor', cursor)
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/explore?${params.toString()}`
+      )
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to load discussions')
+        return
+      }
+
+      if (reset) {
+        setDiscussions(data.discussions || [])
+      } else {
+        setDiscussions(prev => [...prev, ...(data.discussions || [])])
+      }
+      setNextCursor(data.next_cursor)
+    } catch {
+      setError('Failed to load discussions')
+    } finally {
+      setLoading(false)
+      setLoadingMore(false)
+    }
+  }
+
+  function handleLoadMore() {
+    if (nextCursor) fetchDiscussions(false, nextCursor)
+  }
 
   return (
     <Layout>
       <div className={styles.header}>
         <h1 className={styles.heading}>Discussions</h1>
-        <p className={styles.subheading}>
-          Academic papers, open for discussion.
-        </p>
+        <p className={styles.subheading}>Academic papers, open for discussion.</p>
       </div>
 
-      {/* Tab bar */}
-      <div className={styles.tabs}>
-        {TABS.map(tab => (
-          <button
-            key={tab}
-            className={`${styles.tab} ${activeTab === tab ? styles.activeTab : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
+      {/* Controls — tabs + topic filter + sort */}
+      <div className={styles.controlsRow}>
+        <div className={styles.tabs}>
+          {FILTERS.map(f => (
+            <button
+              key={f}
+              className={`${styles.tab} ${activeFilter === f ? styles.activeTab : ''}`}
+              onClick={() => setActiveFilter(f)}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.dropdowns}>
+          <TopicDropdown
+            topics={topics}
+            value={activeTopic}
+            onChange={setActiveTopic}
+          />
+          <SortDropdown
+            options={SORT_OPTIONS}
+            value={activeSort}
+            onChange={setActiveSort}
+          />
+        </div>
       </div>
 
       {/* Feed */}
-      <div className={styles.feed}>
-        {filtered.length === 0 ? (
-          <p className={styles.empty}>No unanswered discussions.</p>
-        ) : (
-          filtered.map(discussion => (
-            <FeedCard key={discussion.id} discussion={discussion} />
-          ))
-        )}
-      </div>
+      {loading ? (
+        <p className={styles.state}>Loading...</p>
+      ) : error ? (
+        <p className={styles.errorState}>{error}</p>
+      ) : discussions.length === 0 ? (
+        <p className={styles.state}>No discussions found.</p>
+      ) : (
+        <div className={styles.feed}>
+          {discussions.map(d => (
+            <FeedCard key={d.id} discussion={d} />
+          ))}
+        </div>
+      )}
+
+      {nextCursor && !loading && (
+        <button
+          className={styles.loadMoreBtn}
+          onClick={handleLoadMore}
+          disabled={loadingMore}
+        >
+          {loadingMore ? 'Loading...' : 'Load more'}
+        </button>
+      )}
     </Layout>
   )
 }
