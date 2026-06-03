@@ -1,0 +1,255 @@
+/* ============================================================
+   PostScholar — Global Styles
+   Theme system: three modes (light, dim, dark) via data-theme
+   on <html>. Accent color is a single CSS variable swapped
+   by the color picker during design phase.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+/* ------------------------------------------------------------
+   Box sizing reset
+   ------------------------------------------------------------ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------
+   Light theme (default)
+   ------------------------------------------------------------ */
+:root,
+[data-theme="light"] {
+  --bg-base:        #ffffff;
+  --bg-surface:     #f7f6f3;
+  --bg-raised:      #efefec;
+  --border:         #dddbd6;
+  --border-strong:  #b8b5af;
+
+  --text-primary:   #1a1917;
+  --text-secondary: #5c5a56;
+  --text-muted:     #9c9994;
+
+  --accent:         #a04545;        /* default — swapped by color picker */
+  --accent-hover:   color-mix(in srgb, var(--accent) 80%, #000);
+  --accent-subtle:  color-mix(in srgb, var(--accent) 12%, transparent);
+
+  --badge-bg:       color-mix(in srgb, var(--accent) 10%, transparent);
+  --badge-text:     var(--accent);
+  --badge-border:   color-mix(in srgb, var(--accent) 30%, transparent);
+
+  --shadow-sm:      0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md:      0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ------------------------------------------------------------
+   Dim theme — dark grey base, easier on eyes than pure dark
+   ------------------------------------------------------------ */
+[data-theme="dim"] {
+  --bg-base:        #1c1c1f;
+  --bg-surface:     #242428;
+  --bg-raised:      #2c2c31;
+  --border:         #3a3a3f;
+  --border-strong:  #52525a;
+
+  --text-primary:   #e8e6e1;
+  --text-secondary: #a8a5a0;
+  --text-muted:     #6a6864;
+
+  --accent:         #a04545;
+  --accent-hover:   color-mix(in srgb, var(--accent) 80%, #fff);
+  --accent-subtle:  color-mix(in srgb, var(--accent) 15%, transparent);
+
+  --badge-bg:       color-mix(in srgb, var(--accent) 15%, transparent);
+  --badge-text:     color-mix(in srgb, var(--accent) 80%, #fff);
+  --badge-border:   color-mix(in srgb, var(--accent) 35%, transparent);
+
+  --shadow-sm:      0 1px 2px rgba(0,0,0,0.25);
+  --shadow-md:      0 2px 8px rgba(0,0,0,0.35);
+}
+
+/* ------------------------------------------------------------
+   Dark theme — near black
+   ------------------------------------------------------------ */
+[data-theme="dark"] {
+  --bg-base:        #0f0f10;
+  --bg-surface:     #161618;
+  --bg-raised:      #1e1e21;
+  --border:         #2a2a2e;
+  --border-strong:  #3e3e44;
+
+  --text-primary:   #f0ede8;
+  --text-secondary: #908d88;
+  --text-muted:     #5a5855;
+
+  --accent:         #a04545;
+  --accent-hover:   color-mix(in srgb, var(--accent) 80%, #fff);
+  --accent-subtle:  color-mix(in srgb, var(--accent) 12%, transparent);
+
+  --badge-bg:       color-mix(in srgb, var(--accent) 12%, transparent);
+  --badge-text:     color-mix(in srgb, var(--accent) 85%, #fff);
+  --badge-border:   color-mix(in srgb, var(--accent) 30%, transparent);
+
+  --shadow-sm:      0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md:      0 2px 8px rgba(0,0,0,0.5);
+}
+
+/* ------------------------------------------------------------
+   Typography scale
+   ------------------------------------------------------------ */
+:root {
+  --font-sans:  'IBM Plex Sans', system-ui, sans-serif;
+  --font-serif: 'IBM Plex Serif', Georgia, serif;
+  --font-mono:  'IBM Plex Mono', monospace;
+
+  --text-xs:   0.75rem;   /* 12px — timestamps, labels */
+  --text-sm:   0.875rem;  /* 14px — metadata, secondary */
+  --text-base: 1rem;      /* 16px — body */
+  --text-lg:   1.125rem;  /* 18px — card titles */
+  --text-xl:   1.25rem;   /* 20px */
+  --text-2xl:  1.5rem;    /* 24px — page headings */
+  --text-3xl:  1.875rem;  /* 30px — paper titles */
+
+  --leading-tight:  1.25;
+  --leading-normal: 1.6;
+  --leading-loose:  1.8;
+
+  /* Spacing scale */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Border radius */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Layout */
+  --nav-height:    56px;
+  --content-max:   1100px;
+  --sidebar-width: 260px;
+}
+
+/* ------------------------------------------------------------
+   Base reset and body
+   ------------------------------------------------------------ */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  background-color: var(--bg-base);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Remove default heading margins and set serif for paper titles */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  color: var(--text-primary);
+}
+
+/* Paper titles use serif */
+.paper-title {
+  font-family: var(--font-serif);
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+button {
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+
+input, textarea {
+  font-family: var(--font-sans);
+}
+
+/* ------------------------------------------------------------
+   Scrollbar styling (webkit)
+   ------------------------------------------------------------ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ------------------------------------------------------------
+   Utility classes
+   ------------------------------------------------------------ */
+.text-primary   { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted     { color: var(--text-muted); }
+.text-accent    { color: var(--accent); }
+
+.text-xs   { font-size: var(--text-xs); }
+.text-sm   { font-size: var(--text-sm); }
+.text-base { font-size: var(--text-base); }
+.text-lg   { font-size: var(--text-lg); }
+.text-xl   { font-size: var(--text-xl); }
+.text-2xl  { font-size: var(--text-2xl); }
+
+.font-sans  { font-family: var(--font-sans); }
+.font-serif { font-family: var(--font-serif); }
+.font-mono  { font-family: var(--font-mono); }
+
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+
+.surface  { background: var(--bg-surface); }
+.raised   { background: var(--bg-raised); }
+.bordered { border: 1px solid var(--border); }
+
+/* ------------------------------------------------------------
+   Accent color presets — applied via JS color picker
+   These override --accent on :root
+   ------------------------------------------------------------ */
+.accent-blue       { --accent: #4a7fa5; }
+.accent-amber      { --accent: #c9933a; }
+.accent-sage       { --accent: #5a8a6a; }
+.accent-rose       { --accent: #b56070; }
+.accent-teal       { --accent: #3d8c8c; }
+.accent-orange     { --accent: #c46a2d; }
+.accent-violet     { --accent: #7060a8; }
+.accent-steel-red  { --accent: #a04545; }

@@ -19,7 +19,8 @@ app.use(cors({
   origin: [
     process.env.CLIENT_URL,               // https://postscholar.org (from env)
     'https://www.postscholar.org',
-    'https://postscholar.vercel.app'       // Vercel preview deployments
+    'https://postscholar.vercel.app',     // Vercel preview deployments
+    'http://localhost:3001'               // Next.js development server
   ],
   credentials: true
 }))

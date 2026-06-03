@@ -1,0 +1,146 @@
+/* Nav — top navigation bar */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--nav-height);
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+}
+
+.inner {
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Wordmark */
+.wordmark {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+
+.wordmark:hover {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+/* Right side */
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.navLink {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.navLink:hover,
+.navLink.active {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+/* Register button — outlined */
+.registerBtn {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.registerBtn:hover {
+  background: var(--accent-subtle);
+  text-decoration: none;
+  color: var(--accent);
+}
+
+/* Start a discussion button — filled */
+.startBtn {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--bg-base);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.startBtn:hover {
+  background: var(--accent-hover);
+  text-decoration: none;
+  color: var(--bg-base);
+}
+
+/* User menu */
+.userMenu {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.username {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.logoutBtn {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.logoutBtn:hover {
+  color: var(--text-primary);
+}
+
+.themeToggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.themeToggle:hover {
+  color: var(--text-primary);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .inner {
+    padding: 0 var(--space-4);
+  }
+
+  .startBtn span {
+    display: none;
+  }
+}
