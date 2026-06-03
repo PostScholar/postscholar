@@ -11,7 +11,7 @@ import styles from './Auth.module.css'
  * Same card layout as Login, three fields, inline errors.
  */
 export default function Register() {
-  const { login } = useAuth()
+  const { refreshUser } = useAuth()
   const router = useRouter()
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -35,6 +35,7 @@ export default function Register() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Registration failed')
+      await refreshUser()
       router.push('/')
     } catch (err) {
       setError(err.message)

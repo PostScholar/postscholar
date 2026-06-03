@@ -6,7 +6,7 @@ import styles from './Discussion.module.css'
 
 async function getDiscussionData(id) {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/discussions/${id}/paper`, {
+    const res = await fetch(`${process.env.API_URL}/discussions/${id}/paper`, {
       cache: 'no-store'
     })
     if (!res.ok) return null
@@ -18,7 +18,8 @@ async function getDiscussionData(id) {
 }
 
 export async function generateMetadata({ params }) {
-  const data = await getDiscussionData(params.id)
+  const { id } = await params
+  const data = await getDiscussionData(id)
   if (!data || data.error) {
     return {
       title: 'Discussion — PostScholar',
@@ -51,7 +52,8 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function DiscussionPage({ params }) {
-  const data = await getDiscussionData(params.id)
+  const { id } = await params
+  const data = await getDiscussionData(id)
 
   if (!data || data.error) {
     return (
@@ -76,7 +78,7 @@ export default async function DiscussionPage({ params }) {
         />
       )}
       <div className={styles.divider} />
-      <DiscussionComments discussionId={params.id} />
+      <DiscussionComments discussionId={id} />
     </Layout>
   )
 }

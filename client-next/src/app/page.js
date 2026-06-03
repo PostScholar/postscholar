@@ -9,10 +9,10 @@ async function getInitialData() {
   try {
     // Fetch initial discussions and topics
     const [discussionsRes, topicsRes] = await Promise.all([
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/explore`, {
+      fetch(`${process.env.API_URL}/explore`, {
         cache: 'no-store'
       }),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/topics`, {
+      fetch(`${process.env.API_URL}/topics`, {
         cache: 'no-store'
       })
     ])
