@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import Layout from '@/components/Layout'
@@ -20,7 +20,7 @@ import styles from './Verify.module.css'
  * and redirect to ORCID. The callback page handles the return.
  */
 export default function Verify() {
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const discussionId = searchParams.get('discussion_id')
@@ -31,8 +31,13 @@ export default function Verify() {
   const [orcidLoading, setOrcidLoading] = useState(false)
   const [error, setError] = useState('')
 
-  if (!user) {
-    router.replace('/login')
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace('/login')
+    }
+  }, [user, isLoading, router])
+
+  if (isLoading || !user) {
     return null
   }
 

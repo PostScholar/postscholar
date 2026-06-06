@@ -97,13 +97,17 @@ export default function Start() {
       .catch(() => {})
   }, [])
 
+  const [isReady, setIsReady] = useState(false)
+
   useEffect(() => {
     if (!user) {
       router.replace('/login')
+    } else {
+      setIsReady(true)
     }
   }, [user, router])
 
-  if (!user) {
+  if (!isReady || !user) {
     return null
   }
 

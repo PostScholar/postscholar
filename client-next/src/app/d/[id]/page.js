@@ -65,7 +65,7 @@ export default async function DiscussionPage({ params }) {
 
   const { paper, started_by, discussion_created_at, custom_tags } = data
 
-  const sidebar = paper ? <PaperSidebar paper={paper} discussionId={params.id} /> : null
+  const sidebar = paper ? <PaperSidebar paper={paper} discussionId={id} /> : null
 
   return (
     <Layout sidebar={sidebar}>

@@ -231,6 +231,28 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'body is required' })
     }
 
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
+    if (emailRegex.test(body)) {
+      return res.status(400).json({ error: 'Comments may not contain email addresses.' })
+    }
+
+    const phoneRegex = /(\+?\d[\s\-.]?){7,15}/
+    if (phoneRegex.test(body)) {
+      return res.status(400).json({ error: 'Comments may not contain phone numbers.' })
+    }
+
+    const promoKeywords = [
+      'buy now', 'click here', 'sign up', 'subscribe', 'discount', 'offer expires',
+      'limited time', 'visit our', 'check out our', 'free trial', 'act now',
+      'order now', 'special offer', 'best price'
+    ]
+    const lowerBody = body.toLowerCase()
+    for (const phrase of promoKeywords) {
+      if (lowerBody.includes(phrase)) {
+        return res.status(400).json({ error: 'Comments may not contain promotional language.' })
+      }
+    }
+
     const discussionCheck = await pool.query(
       'SELECT id FROM discussions WHERE id = $1',
       [discussion_id]
@@ -293,6 +315,28 @@ router.patch('/comments/:id', authenticateToken, async (req, res) => {
 
     if (!body || typeof body !== 'string' || body.trim().length === 0) {
       return res.status(400).json({ error: 'body is required' })
+    }
+
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
+    if (emailRegex.test(body)) {
+      return res.status(400).json({ error: 'Comments may not contain email addresses.' })
+    }
+
+    const phoneRegex = /(\+?\d[\s\-.]?){7,15}/
+    if (phoneRegex.test(body)) {
+      return res.status(400).json({ error: 'Comments may not contain phone numbers.' })
+    }
+
+    const promoKeywords = [
+      'buy now', 'click here', 'sign up', 'subscribe', 'discount', 'offer expires',
+      'limited time', 'visit our', 'check out our', 'free trial', 'act now',
+      'order now', 'special offer', 'best price'
+    ]
+    const lowerBody = body.toLowerCase()
+    for (const phrase of promoKeywords) {
+      if (lowerBody.includes(phrase)) {
+        return res.status(400).json({ error: 'Comments may not contain promotional language.' })
+      }
     }
 
     const result = await pool.query(
