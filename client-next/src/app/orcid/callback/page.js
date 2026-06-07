@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import styles from './OrcidCallback.module.css'
 
@@ -13,7 +13,7 @@ import styles from './OrcidCallback.module.css'
  *
  * After success or failure, we redirect back to the discussion.
  */
-export default function OrcidCallback() {
+function OrcidCallbackInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [status, setStatus] = useState('loading') // loading | success | error | no_match
@@ -96,5 +96,13 @@ export default function OrcidCallback() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function OrcidCallback() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>}>
+      <OrcidCallbackInner />
+    </Suspense>
   )
 }

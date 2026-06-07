@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import styles from './Auth.module.css'
@@ -10,7 +10,7 @@ import styles from './Auth.module.css'
  * Reads the token from the URL query string.
  * Submits to POST /auth/reset-password.
  */
-export default function ResetPassword() {
+function ResetPasswordInner() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
   const router = useRouter()
@@ -123,5 +123,13 @@ export default function ResetPassword() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>}>
+      <ResetPasswordInner />
+    </Suspense>
   )
 }

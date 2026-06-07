@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { searchDiscussions } from '@/lib/api'
 import Layout from '@/components/Layout'
 import FeedCard from '@/components/FeedCard'
 import styles from './Search.module.css'
 
-export default function SearchPage() {
+function SearchPageInner() {
   const searchParams = useSearchParams()
   const q = searchParams.get('q') || ''
   const [results, setResults] = useState([])
@@ -54,5 +54,13 @@ export default function SearchPage() {
         </div>
       </div>
     </Layout>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>}>
+      <SearchPageInner />
+    </Suspense>
   )
 }

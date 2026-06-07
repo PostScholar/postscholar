@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import Layout from '@/components/Layout'
@@ -19,7 +19,7 @@ import styles from './Verify.module.css'
  * In E9 the ORCID button will hit GET /auth/orcid/url?discussion_id=xxx
  * and redirect to ORCID. The callback page handles the return.
  */
-export default function Verify() {
+function VerifyInner() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -116,5 +116,13 @@ export default function Verify() {
         </div>
       </div>
     </Layout>
+  )
+}
+
+export default function Verify() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>}>
+      <VerifyInner />
+    </Suspense>
   )
 }

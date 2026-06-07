@@ -6,6 +6,8 @@ export const metadata = {
   title: 'Explore discussions — PostScholar',
 }
 
+export const dynamic = 'force-dynamic'
+
 async function getInitialData() {
   try {
     // Fetch initial discussions and topics
