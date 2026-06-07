@@ -53,9 +53,15 @@ export default function OrcidCallback() {
           setMessage(data.reason || 'Your ORCID name did not match any author on this paper.')
         }
 
-        // Redirect back after 3 seconds
-        // In E9 we'll extract discussion_id from the state JWT to redirect precisely
-        setTimeout(() => router.push('/'), 3000)
+        let redirectPath = '/'
+        try {
+          const decoded = JSON.parse(atob(state.split('.')[1]))
+          if (decoded.discussion_id) {
+            redirectPath = `/d/${decoded.discussion_id}`
+          }
+        } catch {}
+
+        setTimeout(() => router.push(redirectPath), 3000)
       } catch {
         setStatus('error')
         setMessage('Failed to reach server')

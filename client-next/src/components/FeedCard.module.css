@@ -1,88 +1,82 @@
-/* FeedCard — single discussion entry in the feed */
-
 .card {
-  display: block;
-  padding: var(--space-5) 0;
+  padding: var(--space-4) 0;
   border-bottom: 1px solid var(--border);
+  display: block;
   text-decoration: none;
-  transition: background 0.1s ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  text-decoration: none;
+  color: inherit;
 }
 
 .card:hover .title {
   color: var(--accent);
 }
 
-/* Unanswered — dashed border, slightly muted */
-.unanswered {
-  opacity: 0.7;
-}
-
-.unanswered .card {
-  border-bottom-style: dashed;
-}
-
-/* Title — serif, full weight */
 .title {
-  font-family: var(--font-serif);
   font-size: var(--text-lg);
   font-weight: 600;
   color: var(--text-primary);
-  line-height: var(--leading-tight);
-  margin-bottom: var(--space-2);
-  transition: color 0.15s ease;
+  line-height: 1.4;
+  margin: 0 0 var(--space-1);
 }
 
-/* Metadata — authors · journal · year */
 .meta {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-2);
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  margin-bottom: var(--space-3);
 }
 
 .meta span:not(:last-child)::after {
   content: '·';
   margin-left: var(--space-2);
-  color: var(--border-strong);
+  color: var(--text-muted);
 }
 
-/* Footer — comment count + time */
 .footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.commentCount {
+.activity {
   font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
-.time {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-}
-.topics {
+.tags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-1);
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
-.topic {
-  font-size: var(--text-xs);
-  font-weight: 500;
-  color: var(--badge-text);
-  background: var(--badge-bg);
-  border: 1px solid var(--badge-border);
-  border-radius: var(--radius-sm);
-  padding: 1px var(--space-2);
+.tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.unanswered {
+  opacity: 0.7;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--space-3) 0;
+  }
+
+  .title {
+    font-size: var(--text-base);
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
 }

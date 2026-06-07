@@ -70,22 +70,22 @@ export default function FeedCard({ discussion }) {
 
       {/* Topics */}
       {topics.length > 0 && (
-        <div className={styles.topics}>
+        <div className={styles.tags}>
           {topics.map(t => (
-            <span key={t.slug} className={styles.topic}>{t.name}</span>
+            <span key={t.slug} className={styles.tag}>{t.name}</span>
           ))}
         </div>
       )}
 
       {/* Footer row */}
       <div className={styles.footer}>
-        <span className={styles.commentCount}>
+        <span className={styles.activity}>
           {unanswered
             ? 'No comments yet'
             : `${comment_count} comment${comment_count === 1 ? '' : 's'}`
           }
         </span>
-        <span className={styles.time}>{timeAgo(latest_activity)}</span>
+        <span className={styles.activity}>{timeAgo(latest_activity)}</span>
       </div>
     </Link>
   )

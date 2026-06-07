@@ -25,11 +25,12 @@ export default function Verify() {
   const searchParams = useSearchParams()
   const discussionId = searchParams.get('discussion_id')
 
-  const [manualText, setManualText] = useState('')
-  const [manualSubmitted, setManualSubmitted] = useState(false)
-  const [manualLoading, setManualLoading] = useState(false)
   const [orcidLoading, setOrcidLoading] = useState(false)
   const [error, setError] = useState('')
+
+  function handleBack() {
+    router.back()
+  }
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -68,26 +69,11 @@ export default function Verify() {
     }
   }
 
-  async function handleManualSubmit(e) {
-    e.preventDefault()
-    if (!manualText.trim()) return
-    setManualLoading(true)
-    setError('')
-    try {
-      // In E9: POST to a manual review endpoint
-      // For now simulate success
-      await new Promise(r => setTimeout(r, 800))
-      setManualSubmitted(true)
-    } catch (err) {
-      setError('Failed to submit request')
-    } finally {
-      setManualLoading(false)
-    }
-  }
 
   return (
     <Layout>
       <div className={styles.page}>
+        <button onClick={handleBack} className="backLink" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>← Back</button>
         <div className={styles.header}>
           <h1 className={styles.heading}>Verify as author</h1>
           <p className={styles.subheading}>
@@ -120,36 +106,13 @@ export default function Verify() {
           )}
         </div>
 
-        {/* Section 2 — Manual review */}
-        <div className={`${styles.section} ${styles.muted}`}>
-          <div className={styles.sectionTitle}>Request manual review</div>
-          <p className={styles.sectionDesc}>
-            If ORCID verification doesn't work for you, describe your authorship and we'll review manually. This may take several days.
+        <div className={styles.note}>
+          <p className={styles.noteText}>
+            <strong>Note:</strong> ORCID is currently the only verification method. If you don't have an ORCID, you can create one for free at{' '}
+            <a href="https://orcid.org/register" target="_blank" rel="noopener noreferrer" className={styles.link}>
+              orcid.org/register
+            </a>.
           </p>
-
-          {manualSubmitted ? (
-            <div className={styles.successBanner}>
-              Your request has been submitted. We'll be in touch via your account email.
-            </div>
-          ) : (
-            <form className={styles.manualForm} onSubmit={handleManualSubmit}>
-              <textarea
-                className={styles.textarea}
-                placeholder="Describe your connection to the paper — your role, institution, co-authors, or any other details that help us verify your authorship."
-                value={manualText}
-                onChange={e => setManualText(e.target.value)}
-                rows={5}
-                required
-              />
-              <button
-                type="submit"
-                className={styles.manualBtn}
-                disabled={manualLoading || !manualText.trim()}
-              >
-                {manualLoading ? 'Submitting...' : 'Submit request'}
-              </button>
-            </form>
-          )}
         </div>
       </div>
     </Layout>

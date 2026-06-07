@@ -162,12 +162,25 @@
   cursor: not-allowed;
 }
 
-/* Success */
-.successBanner {
-  padding: var(--space-3) var(--space-4);
-  background: rgba(90, 138, 106, 0.1);
-  border: 1px solid rgba(90, 138, 106, 0.3);
+.note {
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+}
+
+.noteText {
   font-size: var(--text-sm);
   color: var(--text-secondary);
+  line-height: var(--leading-normal);
+  margin: 0;
+}
+
+.link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
 }

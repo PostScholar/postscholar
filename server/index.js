@@ -51,8 +51,12 @@ app.use('/papers', require('./routes/papers'))           // DOI lookup, paper fe
 app.use('/auth', require('./routes/auth'))               // register, login, /me
 app.use('/discussions', require('./routes/discussions')) // comments, search, delete
 app.use('/auth/orcid', require('./routes/orcid'))         // ORCID OAuth integration // ORCID OAuth, author badge
+app.use('/users', require('./routes/users'))             // user profiles
+app.use('/search', require('./routes/search'))           // global search
 app.use('/', exploreRouter) // explore feed and topics
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => console.log(`server running on port ${PORT}`))
+
+module.exports = app
 

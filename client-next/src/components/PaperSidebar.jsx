@@ -20,7 +20,7 @@ export default function PaperSidebar({ paper, discussionId }) {
       router.push('/login')
       return
     }
-    router.push('/verify')
+    router.push(`/verify?discussion_id=${discussionId}`)
   }
 
   return (

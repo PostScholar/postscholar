@@ -137,3 +137,23 @@ export function forgotPassword(email) {
 export function resetPassword(token, password) {
   return api.post('/auth/reset-password', { token, password })
 }
+
+// ---------------------------------------------------------------------------
+// Users / Profiles
+// ---------------------------------------------------------------------------
+
+export function getProfile(username) {
+  return api.get(`/users/${username}`)
+}
+
+export function updateProfile(data) {
+  return api.patch('/users/me', data)
+}
+
+// ---------------------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------------------
+
+export function searchDiscussions(q) {
+  return api.get(`/search?q=${encodeURIComponent(q)}`)
+}

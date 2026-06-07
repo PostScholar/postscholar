@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
@@ -19,6 +20,16 @@ export default function Nav() {
   const { theme, toggleTheme } = useTheme()
   const router = useRouter()
   const pathname = usePathname()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  function handleSearch(e) {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+      setSearchQuery('')
+    }
+  }
 
   async function handleLogout() {
     await logout()
@@ -33,8 +44,37 @@ export default function Nav() {
           PostScholar
         </Link>
 
+        {/* Search */}
+        <form onSubmit={handleSearch} className={styles.search}>
+          <input
+            type="text"
+            className={styles.searchInput}
+            placeholder="Search…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+          <button type="submit" className={styles.searchBtn} aria-label="Search">
+            ↵
+          </button>
+        </form>
+
+        {/* Hamburger menu (mobile only) */}
+        <button
+          className={styles.hamburger}
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Toggle menu"
+        >
+          {menuOpen ? '✕' : '☰'}
+        </button>
+
         {/* Right side */}
-        <div className={styles.right}>
+        <div className={`${styles.right} ${menuOpen ? styles.open : ''}`}>
+          <Link
+            href="/explore"
+            className={`${styles.navLink} ${pathname === '/explore' ? styles.active : ''}`}
+          >
+            Discussions
+          </Link>
           <button onClick={toggleTheme} className={styles.themeToggle} aria-label="Toggle theme">
             {theme === 'light' ? '☾' : '☀'}
           </button>
@@ -47,7 +87,9 @@ export default function Nav() {
                 Start a discussion
               </Link>
               <div className={styles.userMenu}>
-                <span className={styles.username}>{user.username}</span>
+                <Link href={`/u/${user.username}`} className={styles.username}>
+                  {user.username}
+                </Link>
                 <button className={styles.logoutBtn} onClick={handleLogout}>
                   Sign out
                 </button>

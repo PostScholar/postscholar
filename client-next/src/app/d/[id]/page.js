@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import Layout from '@/components/Layout'
 import PaperHeader from '@/components/PaperHeader'
 import PaperSidebar from '@/components/PaperSidebar'
@@ -69,6 +70,7 @@ export default async function DiscussionPage({ params }) {
 
   return (
     <Layout sidebar={sidebar}>
+      <Link href="/explore" className="backLink">← Discussions</Link>
       {paper && (
         <PaperHeader
           paper={paper}

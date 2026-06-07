@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import Layout from '@/components/Layout'
@@ -246,10 +247,13 @@ export default function Start() {
   return (
     <Layout>
       <div className={styles.page}>
-        <div className={styles.header}>
+        <Link href="/explore" className="backLink">← Discussions</Link>
+        <div className={styles.intro}>
           <h1 className={styles.heading}>Start a discussion</h1>
-          <p className={styles.subheading}>
-            Paste a DOI to find the paper. If it isn't in CrossRef, enter it manually.
+          <p className={styles.description}>
+            Paste a DOI to find a published paper. PostScholar will fetch the title,
+            authors, and abstract from CrossRef. If the paper already has a discussion,
+            you will be taken there instead.
           </p>
         </div>
 
@@ -272,6 +276,9 @@ export default function Start() {
               {status === 'loading' ? 'Looking up...' : 'Look up'}
             </button>
           </div>
+          <p className={styles.hint}>
+            Example: <code className={styles.code}>10.1038/nature14539</code>
+          </p>
         </form>
 
         {status === 'error' && <p className={styles.error}>{errorMsg}</p>}

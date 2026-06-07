@@ -111,8 +111,14 @@
   font-family: var(--font-mono);
 }
 
-.startedBy strong {
+.startedByLink {
   color: var(--text-secondary);
   font-weight: 600;
   font-family: var(--font-sans);
+  text-decoration: none;
+}
+
+.startedByLink:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
 }

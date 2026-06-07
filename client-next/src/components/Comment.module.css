@@ -33,12 +33,32 @@
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.username:hover {
+  text-decoration: underline;
 }
 
 .time {
   font-size: var(--text-xs);
   color: var(--text-muted);
   font-family: var(--font-mono);
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.edited {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  line-height: 1;
 }
 
 .text {

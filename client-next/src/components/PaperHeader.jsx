@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import styles from './PaperHeader.module.css'
 
 /**
@@ -89,7 +90,7 @@ export default function PaperHeader({ paper, startedBy, discussionCreatedAt, cus
       {/* Who started the discussion */}
       {startedBy && (
         <p className={styles.startedBy}>
-          Discussion started by <strong>{startedBy}</strong>
+          Discussion started by <Link href={`/u/${startedBy}`} className={styles.startedByLink}>{startedBy}</Link>
           {discussionCreatedAt && <> · {timeAgo(discussionCreatedAt)}</>}
         </p>
       )}

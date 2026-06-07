@@ -1,0 +1,23 @@
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-8) clamp(1rem, 4vw, 3rem);
+  width: 100%;
+}
+
+.summary {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0 0 var(--space-4);
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+}
+
+.empty {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  padding: var(--space-4) 0;
+}

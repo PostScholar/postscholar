@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import AuthorBadge from './AuthorBadge'
@@ -46,7 +47,7 @@ export default function Comment({
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
 
-  const isOwn = user && user.userId === comment.user_id
+  const isOwn = user && user.username === comment.username
   const indentLevel = Math.min(depth, 6)
 
   function handleReplyClick() {
@@ -107,9 +108,14 @@ export default function Comment({
       <div className={styles.body}>
         {/* Header */}
         <div className={styles.header}>
-          <span className={styles.username}>{comment.username}</span>
+          <Link href={`/u/${comment.username}`} className={styles.username}>
+            {comment.username}
+          </Link>
           <AuthorBadge isVerifiedAuthor={comment.is_verified_author} />
           <span className={styles.time}>{timeAgo(comment.created_at)}</span>
+          {comment.updated_at && comment.updated_at !== comment.created_at && (
+            <span className={styles.edited}>(edited)</span>
+          )}
         </div>
 
         {/* Body or edit form */}

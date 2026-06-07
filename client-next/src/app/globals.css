@@ -101,13 +101,13 @@
   --font-serif: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:  'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
 
-  --text-xs:   0.75rem;   /* 12px — timestamps, labels */
-  --text-sm:   0.875rem;  /* 14px — metadata, secondary */
-  --text-base: 1rem;      /* 16px — body */
-  --text-lg:   1.125rem;  /* 18px — card titles */
-  --text-xl:   1.25rem;   /* 20px */
-  --text-2xl:  1.5rem;    /* 24px — page headings */
-  --text-3xl:  1.875rem;  /* 30px — paper titles */
+  --text-xs:   clamp(0.70rem, 0.68rem + 0.1vw, 0.75rem);
+  --text-sm:   clamp(0.82rem, 0.80rem + 0.1vw, 0.875rem);
+  --text-base: clamp(0.95rem, 0.92rem + 0.15vw, 1rem);
+  --text-lg:   clamp(1.05rem, 1.00rem + 0.25vw, 1.125rem);
+  --text-xl:   1.25rem;
+  --text-2xl:  clamp(1.30rem, 1.20rem + 0.5vw, 1.5rem);
+  --text-3xl:  clamp(1.50rem, 1.30rem + 1vw, 1.875rem);
 
   --leading-tight:  1.25;
   --leading-normal: 1.6;
@@ -244,6 +244,41 @@ input, textarea {
 .surface  { background: var(--bg-surface); }
 .raised   { background: var(--bg-raised); }
 .bordered { border: 1px solid var(--border); }
+
+/* Back link */
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+  margin-bottom: var(--space-4);
+  gap: 4px;
+}
+
+.backLink:hover {
+  color: var(--text-secondary);
+}
+
+/* Tap target sizes */
+button,
+a,
+input[type="submit"],
+input[type="button"] {
+  min-height: 36px;
+}
+
+@media (max-width: 768px) {
+  button,
+  a.btn,
+  .navLink,
+  .registerBtn,
+  .startBtn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
 
 /* ------------------------------------------------------------
    Accent color presets — applied via JS color picker
