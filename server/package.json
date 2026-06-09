@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "jest tests/"
+    "test": "jest tests/",
+    "migrate": "node db/migrate.js",
+    "migrate:railway": "railway run --service Postgres sh -c 'DATABASE_URL=\"$DATABASE_PUBLIC_URL\" node db/migrate.js'"
   },
   "keywords": [],
   "author": "",

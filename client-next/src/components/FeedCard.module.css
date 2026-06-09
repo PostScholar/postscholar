@@ -1,94 +1,156 @@
 .card {
-  padding: var(--space-4) 0;
+  padding: var(--space-6) var(--space-3);
   border-bottom: 1px solid var(--border);
   display: flex;
-  gap: var(--space-3);
+  align-items: flex-start;
+  gap: var(--space-2);
   position: relative;
+  transition: background 0.15s ease;
+  border-radius: var(--radius-md);
+  margin: 0 calc(-1 * var(--space-3));
 }
 
-.cardLink {
+.card:hover {
+  background: var(--bg-raised);
+}
+
+.cardBody {
   flex: 1;
-  text-decoration: none;
-  color: inherit;
   min-width: 0;
 }
 
-.cardLink:hover .title {
-  color: var(--accent);
+.titleLink {
+  display: block;
+  text-decoration: none;
+  color: inherit;
 }
 
 .title {
-  font-size: var(--text-lg);
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.4;
-  margin: 0 0 var(--space-1);
+  margin: 0 0 var(--space-4);
+  letter-spacing: -0.02em;
+  transition: color 0.2s;
+}
+
+.titleLink:hover .title {
+  color: var(--brand);
 }
 
 .meta {
   font-size: var(--text-sm);
   color: var(--text-secondary);
-  margin: 0 0 var(--space-2);
+  margin: 0 0 var(--space-3);
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  align-items: baseline;
+  gap: 0;
+  line-height: 1.5;
 }
 
-.meta span:not(:last-child)::after {
+.metaItem {
+  display: inline;
+}
+
+.metaItem:not(:last-child)::after {
   content: '·';
-  margin-left: var(--space-2);
+  margin: 0 var(--space-2);
   color: var(--text-muted);
 }
 
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.metaLabel {
+  color: var(--text-muted);
+  font-weight: 400;
 }
 
-.activity {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
+.metaLabel::after {
+  content: '\00a0';
+}
+
+.author {
+  font-size: inherit;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+  line-height: inherit;
+  min-height: 0;
+  display: inline;
+  vertical-align: baseline;
+}
+
+.author:visited {
+  color: var(--text-secondary);
+}
+
+.author:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
+  gap: var(--space-2);
   margin-bottom: var(--space-2);
 }
 
 .tag {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--bg-raised);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
+  font-size: var(--text-xs);
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  border: 1px solid var(--badge-border);
+  font-weight: 400;
+  transition: background 0.15s, border-color 0.15s;
+  cursor: pointer;
 }
 
-.unanswered {
-  opacity: 0.7;
+.tag:hover {
+  background: var(--bg-raised);
+  border-color: var(--border-strong);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.activity {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.activity:not(:last-child)::after {
+  content: '·';
+  margin-left: var(--space-4);
+  color: var(--text-muted);
 }
 
 .bookmarkBtn {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  align-self: flex-start;
+  min-width: 44px;
+  min-height: 44px;
   padding: var(--space-2);
   background: none;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s;
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin-top: 2px;
+  border-radius: 4px;
+  transition: all 0.2s;
 }
 
 .bookmarkBtn:hover {
-  color: var(--accent);
+  background: var(--bg-raised);
+  color: var(--text-primary);
 }
 
 .bookmarkBtn.bookmarked {
@@ -100,18 +162,22 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .card {
-    padding: var(--space-3) 0;
+    padding: var(--space-6) 0;
   }
 
   .title {
-    font-size: var(--text-base);
+    font-size: 1.1rem;
+    margin-bottom: var(--space-3);
   }
 
-  .footer {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-1);
+  .tags {
+    gap: var(--space-2);
+  }
+
+  .tag {
+    font-size: 12px;
+    padding: 3px 10px;
   }
 }

@@ -53,16 +53,27 @@ router.get('/', authenticateToken, async (req, res) => {
         p.journal,
         p.year,
         p.doi,
-        u.username as started_by,
+        u.username,
         COUNT(c.id)::int as comment_count,
-        b.created_at as bookmarked_at
+        COALESCE(MAX(c.created_at), d.created_at) AS latest_activity,
+        b.created_at as bookmarked_at,
+        COALESCE(
+          (
+            SELECT json_agg(json_build_object('name', t.name, 'slug', t.slug))
+            FROM discussion_topics dt
+            JOIN topics t ON t.id = dt.topic_id
+            WHERE dt.discussion_id = d.id
+          ),
+          '[]'::json
+        ) AS topics
       FROM bookmarks b
       JOIN discussions d ON b.discussion_id = d.id
       JOIN papers p ON d.paper_id = p.id
       LEFT JOIN users u ON d.created_by = u.id
       LEFT JOIN comments c ON d.id = c.discussion_id
       WHERE b.user_id = $1
-      GROUP BY d.id, p.id, u.username, b.created_at
+      GROUP BY d.id, p.id, p.title, p.authors_json, p.journal, p.year, p.doi,
+               u.username, b.created_at, d.created_at
       ORDER BY b.created_at DESC`,
       [userId]
     )

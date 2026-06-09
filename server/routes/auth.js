@@ -48,6 +48,15 @@ function setTokenCookie(res, token) {
   })
 }
 
+function clearTokenCookie(res) {
+  res.cookie('token', '', {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 0
+  })
+}
+
 /**
  * hashToken(rawToken)
  * SHA-256 hashes a raw token before storing in the DB.
@@ -185,6 +194,11 @@ router.get('/me', authenticateToken, async (req, res) => {
   )
   if (!result.rows[0]) return res.status(404).json({ error: 'User not found' })
   res.json(result.rows[0])
+})
+
+router.post('/logout', (req, res) => {
+  clearTokenCookie(res)
+  res.json({ ok: true })
 })
 
 // ---------------------------------------------------------------------------

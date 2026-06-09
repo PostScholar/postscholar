@@ -300,11 +300,31 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
 
     const comment = result.rows[0]
 
-    // Check if the commenter is a verified author for this discussion
     const verifiedCheck = await pool.query(
       'SELECT id FROM author_verifications WHERE user_id = $1 AND discussion_id = $2',
       [req.user.userId, discussion_id]
     )
+
+    const mentionRegex = /@(\w+)/g
+    const mentions = [...sanitizedBody.matchAll(mentionRegex)].map(m => m[1])
+
+    if (mentions.length > 0) {
+      const uniqueMentions = [...new Set(mentions)]
+      const mentionedUsers = await pool.query(
+        'SELECT id, username FROM users WHERE username = ANY($1::text[])',
+        [uniqueMentions]
+      )
+
+      for (const mentionedUser of mentionedUsers.rows) {
+        if (mentionedUser.id !== req.user.userId) {
+          await pool.query(
+            `INSERT INTO mentions (comment_id, mentioned_user_id, mentioning_user_id)
+             VALUES ($1, $2, $3)`,
+            [comment.id, mentionedUser.id, req.user.userId]
+          ).catch(err => console.error('Mention insert error:', err))
+        }
+      }
+    }
 
     return res.status(201).json({
       comment: {
@@ -605,6 +625,70 @@ router.get('/:id/stats', async (req, res) => {
     })
   } catch (err) {
     console.error('GET /discussions/:id/stats error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// GET /discussions/following
+// ---------------------------------------------------------------------------
+// Get discussions from users the current user follows
+// ---------------------------------------------------------------------------
+router.get('/following', authenticateToken, async (req, res) => {
+  try {
+    const { limit = 20, cursor } = req.query
+    const limitNum = Math.min(parseInt(limit) || 20, 50)
+
+    let query = `
+      SELECT d.id, d.created_at, d.created_by, d.custom_tags,
+             p.title, p.authors_json, p.journal, p.year, p.doi,
+             u.username,
+             COUNT(c.id)::int AS comment_count,
+             COALESCE(MAX(c.created_at), d.created_at) AS latest_activity,
+             COALESCE(
+               (
+                 SELECT json_agg(json_build_object('name', t.name, 'slug', t.slug))
+                 FROM discussion_topics dt
+                 JOIN topics t ON t.id = dt.topic_id
+                 WHERE dt.discussion_id = d.id
+               ),
+               '[]'::json
+             ) AS topics
+      FROM discussions d
+      JOIN papers p ON p.id = d.paper_id
+      JOIN users u ON u.id = d.created_by
+      JOIN follows f ON f.following_id = d.created_by
+      LEFT JOIN comments c ON c.discussion_id = d.id
+      WHERE f.follower_id = $1
+    `
+
+    const params = [req.user.userId]
+    let paramCount = 2
+
+    if (cursor) {
+      query += ` AND d.created_at < $${paramCount}`
+      params.push(cursor)
+      paramCount++
+    }
+
+    query += `
+      GROUP BY d.id, d.custom_tags, d.created_by, d.created_at,
+               p.title, p.authors_json, p.journal, p.year, p.doi, u.username
+      ORDER BY d.created_at DESC
+      LIMIT $${paramCount}
+    `
+    params.push(limitNum + 1)
+
+    const result = await pool.query(query, params)
+    const hasMore = result.rows.length > limitNum
+    const discussions = hasMore ? result.rows.slice(0, limitNum) : result.rows
+
+    res.json({
+      discussions,
+      next_cursor: hasMore ? discussions[discussions.length - 1].created_at : null
+    })
+  } catch (err) {
+    console.error('GET /discussions/following error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

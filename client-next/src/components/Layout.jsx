@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import Nav from './Nav'
 import Footer from './Footer'
 import styles from './Layout.module.css'
@@ -11,10 +12,14 @@ import styles from './Layout.module.css'
  * Pages that need a sidebar pass sidebar prop.
  * Pass bare={true} for landing page (no padding, full width).
  */
-export default function Layout({ children, sidebar = null, bare = false }) {
+export default function Layout({ children, sidebar = null, bare = false, wide = false }) {
+  const mainClass = wide ? styles.wide : styles.main
+
   return (
     <div className={styles.root}>
-      <Nav />
+      <Suspense fallback={null}>
+        <Nav />
+      </Suspense>
       <div className={styles.body}>
         {sidebar ? (
           <div className={styles.withSidebar}>
@@ -30,7 +35,7 @@ export default function Layout({ children, sidebar = null, bare = false }) {
             {children}
           </main>
         ) : (
-          <main className={styles.main}>
+          <main className={mainClass}>
             {children}
           </main>
         )}

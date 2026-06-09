@@ -217,37 +217,4 @@ router.post('/manual', authenticateToken, async (req, res) => {
   }
 })
 
-// ---------------------------------------------------------------------------
-// GET /papers/metrics/*doi
-// ---------------------------------------------------------------------------
-// Public. Fetches citation count from OpenCitations API for a given DOI.
-// Returns { citation_count } or { citation_count: null } if unavailable.
-// ---------------------------------------------------------------------------
-router.get('/metrics/*doi', async (req, res) => {
-  try {
-    const doi = Array.isArray(req.params.doi)
-      ? req.params.doi.join('/').trim().toLowerCase()
-      : req.params.doi?.toString().trim().toLowerCase()
-
-    if (!doi) return res.status(400).json({ error: 'doi is required' })
-
-    const openCitationsUrl = `https://opencitations.net/index/api/v1/citation-count/${encodeURIComponent(doi)}`
-    const ocRes = await fetch(openCitationsUrl)
-
-    if (!ocRes.ok) {
-      return res.json({ citation_count: null })
-    }
-
-    const ocData = await ocRes.json()
-    const citationCount = Array.isArray(ocData) && ocData[0]?.count
-      ? parseInt(ocData[0].count)
-      : null
-
-    res.json({ citation_count: citationCount })
-  } catch (err) {
-    console.error('GET /papers/metrics/* error:', err)
-    res.json({ citation_count: null })
-  }
-})
-
 module.exports = router

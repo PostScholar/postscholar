@@ -5,7 +5,7 @@
    by the color picker during design phase.
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
 /* ------------------------------------------------------------
    Box sizing reset
@@ -19,23 +19,31 @@
    ------------------------------------------------------------ */
 :root,
 [data-theme="light"] {
-  --bg-base:        #ffffff;
-  --bg-surface:     #f7f6f3;
-  --bg-raised:      #efefec;
-  --border:         #dddbd6;
-  --border-strong:  #b8b5af;
+  --bg-base:        #F7F7F5;
+  --bg-surface:     #FFFFFF;
+  --bg-raised:      #F3F3F0;
+  --border:         #ECEAE6;
+  --border-strong:  #D8D6D0;
 
-  --text-primary:   #1a1917;
-  --text-secondary: #5c5a56;
-  --text-muted:     #9c9994;
+  --text-primary:   #1C1C1A;
+  --text-secondary: #5C5C58;
+  --text-muted:     #94948E;
 
-  --accent:         #a04545;        /* default — swapped by color picker */
-  --accent-hover:   color-mix(in srgb, var(--accent) 80%, #000);
-  --accent-subtle:  color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent:         #5C6B73;
+  --accent-hover:   #4A5560;
+  --accent-subtle:  rgba(92, 107, 115, 0.08);
+  --accent-ring:    rgba(92, 107, 115, 0.18);
 
-  --badge-bg:       color-mix(in srgb, var(--accent) 10%, transparent);
-  --badge-text:     var(--accent);
-  --badge-border:   color-mix(in srgb, var(--accent) 30%, transparent);
+  --badge-bg:       rgba(92, 107, 115, 0.07);
+  --badge-text:     #5C6B73;
+  --badge-border:   rgba(92, 107, 115, 0.16);
+
+  /* Subtle brand red — used sparingly for emphasis */
+  --brand:          #8E5A5A;
+  --brand-hover:    #7A4A4A;
+  --brand-subtle:   rgba(142, 90, 90, 0.07);
+  --brand-border:   rgba(142, 90, 90, 0.18);
+  --brand-ring:     rgba(142, 90, 90, 0.14);
 
   /* Semantic colors */
   --success:        #2d7a5e;
@@ -58,31 +66,38 @@
   --upvote:         #10b981;
   --downvote:       #ef4444;
 
-  --shadow-sm:      0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md:      0 2px 8px rgba(0,0,0,0.08);
+  --shadow-sm:      0 1px 2px rgba(0,0,0,0.03);
+  --shadow-md:      0 2px 6px rgba(0,0,0,0.04);
 }
 
 /* ------------------------------------------------------------
    Dim theme — dark grey base, easier on eyes than pure dark
    ------------------------------------------------------------ */
 [data-theme="dim"] {
-  --bg-base:        #1c1c1f;
-  --bg-surface:     #242428;
-  --bg-raised:      #2c2c31;
-  --border:         #3a3a3f;
-  --border-strong:  #52525a;
+  --bg-base:        #141414;
+  --bg-surface:     #1C1C1C;
+  --bg-raised:      #242424;
+  --border:         #2E2E2E;
+  --border-strong:  #3C3C3C;
 
-  --text-primary:   #e8e6e1;
-  --text-secondary: #a8a5a0;
-  --text-muted:     #6a6864;
+  --text-primary:   #E8E6E2;
+  --text-secondary: #A8A6A0;
+  --text-muted:     #737370;
 
-  --accent:         #a04545;
-  --accent-hover:   color-mix(in srgb, var(--accent) 80%, #fff);
-  --accent-subtle:  color-mix(in srgb, var(--accent) 15%, transparent);
+  --accent:         #8B9AAA;
+  --accent-hover:   #A4B0BC;
+  --accent-subtle:  rgba(139, 154, 170, 0.10);
+  --accent-ring:    rgba(139, 154, 170, 0.22);
 
-  --badge-bg:       color-mix(in srgb, var(--accent) 15%, transparent);
-  --badge-text:     color-mix(in srgb, var(--accent) 80%, #fff);
-  --badge-border:   color-mix(in srgb, var(--accent) 35%, transparent);
+  --badge-bg:       rgba(139, 154, 170, 0.10);
+  --badge-text:     #A4B0BC;
+  --badge-border:   rgba(139, 154, 170, 0.20);
+
+  --brand:          #C49A9A;
+  --brand-hover:    #D4AAAA;
+  --brand-subtle:   rgba(196, 154, 154, 0.10);
+  --brand-border:   rgba(196, 154, 154, 0.22);
+  --brand-ring:     rgba(196, 154, 154, 0.16);
 
   /* Semantic colors */
   --success:        #34d399;
@@ -113,23 +128,30 @@
    Dark theme — near black
    ------------------------------------------------------------ */
 [data-theme="dark"] {
-  --bg-base:        #0f0f10;
-  --bg-surface:     #161618;
-  --bg-raised:      #1e1e21;
-  --border:         #2a2a2e;
-  --border-strong:  #3e3e44;
+  --bg-base:        #0F0F0F;
+  --bg-surface:     #181818;
+  --bg-raised:      #222222;
+  --border:         #2C2C2C;
+  --border-strong:  #383838;
 
-  --text-primary:   #f0ede8;
-  --text-secondary: #908d88;
-  --text-muted:     #5a5855;
+  --text-primary:   #ECEAE6;
+  --text-secondary: #A6A4A0;
+  --text-muted:     #6E6E6A;
 
-  --accent:         #a04545;
-  --accent-hover:   color-mix(in srgb, var(--accent) 80%, #fff);
-  --accent-subtle:  color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent:         #8B9AAA;
+  --accent-hover:   #A4B0BC;
+  --accent-subtle:  rgba(139, 154, 170, 0.10);
+  --accent-ring:    rgba(139, 154, 170, 0.22);
 
-  --badge-bg:       color-mix(in srgb, var(--accent) 12%, transparent);
-  --badge-text:     color-mix(in srgb, var(--accent) 85%, #fff);
-  --badge-border:   color-mix(in srgb, var(--accent) 30%, transparent);
+  --badge-bg:       rgba(139, 154, 170, 0.10);
+  --badge-text:     #A4B0BC;
+  --badge-border:   rgba(139, 154, 170, 0.20);
+
+  --brand:          #C49A9A;
+  --brand-hover:    #D4AAAA;
+  --brand-subtle:   rgba(196, 154, 154, 0.10);
+  --brand-border:   rgba(196, 154, 154, 0.22);
+  --brand-ring:     rgba(196, 154, 154, 0.16);
 
   /* Semantic colors */
   --success:        #34d399;
@@ -161,7 +183,7 @@
    ------------------------------------------------------------ */
 :root {
   --font-sans:  'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-serif: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'IBM Plex Serif', Georgia, 'Times New Roman', serif;
   --font-mono:  'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
 
   --text-xs:   clamp(0.70rem, 0.68rem + 0.1vw, 0.75rem);
@@ -195,7 +217,7 @@
 
   /* Layout */
   --nav-height:    56px;
-  --content-max:   1100px;
+  --content-max:   1400px;
   --sidebar-width: 260px;
 }
 
@@ -206,11 +228,13 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
   font-family: var(--font-sans);
   font-size: var(--text-base);
   font-weight: 400;
@@ -240,10 +264,11 @@ p {
 a {
   color: var(--accent);
   text-decoration: none;
+  transition: color 0.15s ease;
 }
 
 a:visited {
-  color: inherit;
+  color: var(--accent);
 }
 
 a:hover {
@@ -323,9 +348,8 @@ input, textarea {
   color: var(--text-secondary);
 }
 
-/* Tap target sizes */
+/* Tap target sizes — scoped to controls, not inline text links */
 button,
-a,
 input[type="submit"],
 input[type="button"] {
   min-height: 36px;

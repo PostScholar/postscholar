@@ -1,10 +1,15 @@
+import { cookies } from 'next/headers'
 import Layout from '@/components/Layout'
 import ProfileClient from './ProfileClient'
+import { getServerApiUrl } from '@/lib/config'
 
 async function getProfile(username) {
   try {
-    const res = await fetch(`${process.env.API_URL}/users/${username}`, {
-      cache: 'no-store'
+    const cookieStore = await cookies()
+    const cookieHeader = cookieStore.toString()
+    const res = await fetch(`${getServerApiUrl()}/users/${username}`, {
+      cache: 'no-store',
+      headers: cookieHeader ? { Cookie: cookieHeader } : {},
     })
     if (!res.ok) return null
     return res.json()

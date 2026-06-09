@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation'
 import { Flag } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import AuthorBadge from './AuthorBadge'
-import { postComment, editComment, deleteComment } from '@/lib/api'
+import { postComment, editComment, deleteComment, submitReport } from '@/lib/api'
+import { hasLatex, renderLatex } from '@/lib/renderLatex'
 import styles from './Comment.module.css'
+import 'katex/dist/katex.min.css'
 
 /**
  * Comment
@@ -49,12 +51,13 @@ export default function Comment({
   const [editError, setEditError] = useState('')
 
   const [reportOpen, setReportOpen] = useState(false)
-  const [reportReason, setReportReason] = useState('')
+  const [reportReason, setReportReason] = useState('spam')
+  const [reportDescription, setReportDescription] = useState('')
   const [reportLoading, setReportLoading] = useState(false)
   const [reportSuccess, setReportSuccess] = useState(false)
 
   const isOwn = user && user.username === comment.username
-  const indentLevel = Math.min(depth, 6)
+  const indentLevel = Math.min(depth, 4)
 
   function handleReplyClick() {
     if (!user) {
@@ -109,15 +112,21 @@ export default function Comment({
 
   async function handleReportSubmit(e) {
     e.preventDefault()
-    if (!reportReason.trim()) return
+    if (!reportReason) return
     setReportLoading(true)
     try {
-      console.log('Report submitted:', { commentId: comment.id, reason: reportReason })
+      await submitReport({
+        comment_id: comment.id,
+        discussion_id: null,
+        reason: reportReason,
+        description: reportDescription.trim() || null
+      })
       setReportSuccess(true)
       setTimeout(() => {
         setReportOpen(false)
         setReportSuccess(false)
-        setReportReason('')
+        setReportReason('spam')
+        setReportDescription('')
       }, 2000)
     } catch (err) {
       alert(err.message)
@@ -127,7 +136,11 @@ export default function Comment({
   }
 
   return (
-    <div className={styles.comment} style={{ '--indent': indentLevel }}>
+    <div
+      className={styles.comment}
+      style={{ '--indent': indentLevel }}
+      data-is-author={comment.is_verified_author || false}
+    >
       {depth > 0 && <div className={styles.threadLine} />}
 
       <div className={styles.body}>
@@ -153,6 +166,7 @@ export default function Comment({
               rows={3}
               autoFocus
             />
+            <p className={styles.latexHint}>Tip: Use $...$ for inline math, $$...$$ for block math</p>
             {editError && <p className={styles.formError}>{editError}</p>}
             <div className={styles.editActions}>
               <button
@@ -172,7 +186,14 @@ export default function Comment({
             </div>
           </form>
         ) : (
-          <p className={styles.text}>{comment.body}</p>
+          hasLatex(comment.body) ? (
+            <div
+              className={styles.text}
+              dangerouslySetInnerHTML={{ __html: renderLatex(comment.body) }}
+            />
+          ) : (
+            <p className={styles.text}>{comment.body}</p>
+          )
         )}
 
         {/* Actions */}
@@ -217,6 +238,7 @@ export default function Comment({
               rows={3}
               autoFocus
             />
+            <p className={styles.latexHint}>Tip: Use $...$ for inline math, $$...$$ for block math</p>
             {replyError && <p className={styles.formError}>{replyError}</p>}
             <div className={styles.replyActions}>
               <button
@@ -244,26 +266,39 @@ export default function Comment({
               <p className={styles.reportSuccess}>Report submitted. Thank you.</p>
             ) : (
               <>
+                <label className={styles.label}>
+                  Reason
+                  <select
+                    className={styles.select}
+                    value={reportReason}
+                    onChange={e => setReportReason(e.target.value)}
+                  >
+                    <option value="spam">Spam</option>
+                    <option value="harassment">Harassment</option>
+                    <option value="offtopic">Off-topic</option>
+                    <option value="misinformation">Misinformation</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
                 <textarea
                   className={styles.textarea}
-                  placeholder="Why are you reporting this comment?"
-                  value={reportReason}
-                  onChange={e => setReportReason(e.target.value)}
+                  placeholder="Additional details (optional)"
+                  value={reportDescription}
+                  onChange={e => setReportDescription(e.target.value)}
                   rows={3}
-                  autoFocus
                 />
                 <div className={styles.reportActions}>
                   <button
                     type="button"
                     className={styles.cancelBtn}
-                    onClick={() => { setReportOpen(false); setReportReason('') }}
+                    onClick={() => { setReportOpen(false); setReportReason('spam'); setReportDescription('') }}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     className={styles.submitBtn}
-                    disabled={reportLoading || !reportReason.trim()}
+                    disabled={reportLoading}
                   >
                     {reportLoading ? 'Submitting...' : 'Submit report'}
                   </button>

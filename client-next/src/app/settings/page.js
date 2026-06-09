@@ -4,14 +4,19 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { updateProfile } from '@/lib/api'
+import { updateProfile, getMyProfile } from '@/lib/api'
 import Layout from '@/components/Layout'
 import styles from './Settings.module.css'
 
 export default function SettingsPage() {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, refreshUser } = useAuth()
   const router = useRouter()
   const [bio, setBio] = useState('')
+  const [affiliation, setAffiliation] = useState('')
+  const [location, setLocation] = useState('')
+  const [websiteUrl, setWebsiteUrl] = useState('')
+  const [twitterHandle, setTwitterHandle] = useState('')
+  const [googleScholarUrl, setGoogleScholarUrl] = useState('')
   const [visibility, setVisibility] = useState({
     bio: true,
     joined_date: true,
@@ -25,11 +30,37 @@ export default function SettingsPage() {
     if (!isLoading && !user) router.replace('/login')
   }, [user, isLoading, router])
 
+  useEffect(() => {
+    if (!user) return
+    getMyProfile()
+      .then(data => {
+        setBio(data.bio || '')
+        setAffiliation(data.affiliation || '')
+        setLocation(data.location || '')
+        setWebsiteUrl(data.website_url || '')
+        setTwitterHandle(data.twitter_handle || '')
+        setGoogleScholarUrl(data.google_scholar_url || '')
+        if (data.profile_visibility) {
+          setVisibility(data.profile_visibility)
+        }
+      })
+      .catch(() => {})
+  }, [user])
+
   async function handleSave() {
     setSaving(true)
     setError(null)
     try {
-      await updateProfile({ bio, profile_visibility: visibility })
+      await updateProfile({
+        bio,
+        affiliation,
+        location,
+        website_url: websiteUrl,
+        twitter_handle: twitterHandle,
+        google_scholar_url: googleScholarUrl,
+        profile_visibility: visibility
+      })
+      await refreshUser()
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (err) {
@@ -62,6 +93,61 @@ export default function SettingsPage() {
             />
             <span className={styles.hint}>{bio.length}/280</span>
           </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Affiliation</label>
+            <input
+              type="text"
+              className={styles.input}
+              value={affiliation}
+              onChange={e => setAffiliation(e.target.value)}
+              placeholder="University or Institution"
+            />
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Location</label>
+            <input
+              type="text"
+              className={styles.input}
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="City, Country"
+            />
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Website</label>
+            <input
+              type="url"
+              className={styles.input}
+              value={websiteUrl}
+              onChange={e => setWebsiteUrl(e.target.value)}
+              placeholder="https://example.com"
+            />
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Twitter Handle</label>
+            <input
+              type="text"
+              className={styles.input}
+              value={twitterHandle}
+              onChange={e => setTwitterHandle(e.target.value)}
+              placeholder="@username"
+            />
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Google Scholar</label>
+            <input
+              type="url"
+              className={styles.input}
+              value={googleScholarUrl}
+              onChange={e => setGoogleScholarUrl(e.target.value)}
+              placeholder="https://scholar.google.com/citations?user=..."
+            />
+          </div>
         </section>
 
         <section className={styles.section}>
@@ -93,6 +179,16 @@ export default function SettingsPage() {
         >
           {saving ? 'Saving…' : saved ? 'Saved' : 'Save changes'}
         </button>
+
+        <section className={styles.section}>
+          <h2 className={styles.sectionHeading}>Topics</h2>
+          <p className={styles.sectionDesc}>
+            Manage topics you follow to personalize your feed.
+          </p>
+          <Link href="/settings/topics" className={styles.topicsLink}>
+            Manage followed topics →
+          </Link>
+        </section>
       </div>
     </Layout>
   )

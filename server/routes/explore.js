@@ -177,6 +177,7 @@ router.get('/explore', optionalAuth, async (req, res) => {
          p.authors_json,
          p.journal,
          p.year,
+         u.username,
          (
            SELECT COUNT(*)
            FROM comments c
@@ -197,6 +198,7 @@ router.get('/explore', optionalAuth, async (req, res) => {
          ) AS topics
        FROM discussions d
        JOIN papers p ON p.id = d.paper_id
+       LEFT JOIN users u ON u.id = d.created_by
        ${whereClause}
        ${orderClause}
        LIMIT ${limitParam}`,

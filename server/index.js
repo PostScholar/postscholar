@@ -21,7 +21,8 @@ app.use(cors({
     process.env.CLIENT_URL,               // https://postscholar.org (from env)
     'https://www.postscholar.org',
     'https://postscholar.vercel.app',     // Vercel preview deployments
-    'http://localhost:3001'               // Next.js development server
+    'http://localhost:3001',              // Next.js development server
+    'http://127.0.0.1:3001'
   ],
   credentials: true
 }))
@@ -42,7 +43,7 @@ app.use(cookieParser())
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per window
+  max: 50, // 50 attempts per window (increased for development)
   skipSuccessfulRequests: true, // Don't count successful auth attempts
   standardHeaders: true,
   legacyHeaders: false,
@@ -51,7 +52,7 @@ const authLimiter = rateLimit({
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  max: 500, // 500 requests per window (increased for development)
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' }
@@ -92,6 +93,8 @@ app.use('/search', require('./routes/search'))           // global search
 app.use('/bookmarks', require('./routes/bookmarks'))     // bookmark discussions
 app.use('/reports', require('./routes/reports'))         // moderation reports
 app.use('/follows', require('./routes/follows'))         // following system
+app.use('/mentions', require('./routes/mentions'))       // @mentions
+app.use('/topic-follows', require('./routes/topic-follows')) // topic following
 app.use('/', exploreRouter) // explore feed and topics
 
 const PORT = process.env.PORT || 3000

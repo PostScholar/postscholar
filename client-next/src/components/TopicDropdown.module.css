@@ -121,10 +121,20 @@
   font-size: var(--text-sm);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 1024px) {
+  .wrapper {
+    width: 100%;
+  }
+
+  .trigger {
+    width: 100%;
+    min-height: 44px;
+  }
+
   .panel {
-    right: auto;
     left: 0;
-    min-width: 200px;
+    right: 0;
+    min-width: 0;
+    width: 100%;
   }
 }

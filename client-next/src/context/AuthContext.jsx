@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect } from 'react'
-import { api } from '@/lib/api'
+import { api, logout as apiLogout } from '@/lib/api'
 
 const AuthContext = createContext(null)
 
@@ -24,6 +24,11 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
+    try {
+      await apiLogout()
+    } catch {
+      // Clear local state even if the server call fails
+    }
     setUser(null)
   }
 

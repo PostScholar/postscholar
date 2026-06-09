@@ -59,7 +59,6 @@ function formatCitation(paper, format) {
 
 export default function PaperHeader({ paper, startedBy, discussionCreatedAt, customTags = [], discussionId }) {
   const { user } = useAuth()
-  const [abstractOpen, setAbstractOpen] = useState(false)
   const [bookmarked, setBookmarked] = useState(false)
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
   const [citeMenuOpen, setCiteMenuOpen] = useState(false)
@@ -201,21 +200,6 @@ export default function PaperHeader({ paper, startedBy, discussionCreatedAt, cus
           {customTags.map(tag => (
             <span key={tag} className={styles.tag}>{tag}</span>
           ))}
-        </div>
-      )}
-
-      {/* Abstract */}
-      {paper.abstract && (
-        <div className={styles.abstractSection}>
-          <button
-            className={styles.abstractToggle}
-            onClick={() => setAbstractOpen(o => !o)}
-          >
-            {abstractOpen ? 'Hide abstract' : 'Show abstract'}
-          </button>
-          {abstractOpen && (
-            <p className={styles.abstract}>{paper.abstract}</p>
-          )}
         </div>
       )}
 

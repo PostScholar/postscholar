@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import CommentThread from '@/components/CommentThread'
-import { getComments, searchComments } from '@/lib/api'
+import { getComments, searchComments, trackView } from '@/lib/api'
 import styles from './Discussion.module.css'
 
 export default function DiscussionComments({ discussionId }) {
@@ -16,6 +16,7 @@ export default function DiscussionComments({ discussionId }) {
   const [searching, setSearching] = useState(false)
 
   useEffect(() => {
+    trackView(discussionId).catch(() => {})
     load(true)
   }, [discussionId, commentSort])
 

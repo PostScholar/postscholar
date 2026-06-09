@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import Layout from '@/components/Layout'
 import { postComment } from '@/lib/api'
+import { getApiUrl } from '@/lib/config'
 import styles from './Start.module.css'
 
 /**
@@ -92,7 +93,7 @@ export default function Start() {
   const [customTagInput, setCustomTagInput] = useState('')
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/topics`)
+    fetch(`${getApiUrl()}/topics`)
       .then(r => r.json())
       .then(data => setAllTopics(data.topics || []))
       .catch(() => {})
@@ -132,7 +133,7 @@ export default function Start() {
     setCustomTagInput('')
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/papers/lookup`, {
+      const res = await fetch(`${getApiUrl()}/papers/lookup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -164,7 +165,7 @@ export default function Start() {
     setErrorMsg('')
     try {
       // Step 1: Create the discussion now that user has committed
-      const discussionRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/discussions`, {
+      const discussionRes = await fetch(`${getApiUrl()}/discussions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -198,7 +199,7 @@ export default function Start() {
     setErrorMsg('')
     try {
       // First create the paper manually
-      const paperRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/papers/manual`, {
+      const paperRes = await fetch(`${getApiUrl()}/papers/manual`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -214,7 +215,7 @@ export default function Start() {
       if (!paperRes.ok) throw new Error(paperData.error || 'Failed to create paper')
 
       // Then create the discussion
-      const discussionRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/discussions`, {
+      const discussionRes = await fetch(`${getApiUrl()}/discussions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

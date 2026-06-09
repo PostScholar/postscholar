@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import FeedCard from '@/components/FeedCard'
 import TopicDropdown from '@/components/TopicDropdown'
 import SortDropdown from '@/components/SortDropdown'
+import { getExplore, normalizeDiscussion } from '@/lib/api'
 import styles from './Home.module.css'
 
 const FILTERS = ['All', 'Unanswered', 'New']
@@ -16,23 +18,39 @@ const SORT_OPTIONS = [
   { value: 'pub_date_asc',  label: 'Publication date ↑' },
 ]
 
-export default function HomeFeed({ initialDiscussions, initialTopics }) {
-  const [discussions, setDiscussions] = useState(initialDiscussions)
-  const [topics, setTopics] = useState(initialTopics)
+export default function HomeFeed({ initialDiscussions, initialTopics, initialNextCursor = null }) {
+  const searchParams = useSearchParams()
+  const topicFromUrl = searchParams.get('topic') || ''
+
+  const [discussions, setDiscussions] = useState(
+    (initialDiscussions || []).map(normalizeDiscussion)
+  )
+  const [topics] = useState(initialTopics)
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
-  const [nextCursor, setNextCursor] = useState(null)
+  const [nextCursor, setNextCursor] = useState(initialNextCursor)
 
   const [activeFilter, setActiveFilter] = useState('All')
-  const [activeTopic, setActiveTopic] = useState('')
+  const [activeTopic, setActiveTopic] = useState(topicFromUrl)
   const [activeSort, setActiveSort] = useState('recent')
+  const skipInitialFetch = useRef(true)
 
-  // Refetch when filter, topic, or sort changes
   useEffect(() => {
-    if (activeFilter !== 'All' || activeTopic || activeSort !== 'recent') {
-      fetchDiscussions(true)
+    if (topicFromUrl) {
+      setActiveTopic(topicFromUrl)
     }
+  }, [topicFromUrl])
+
+  useEffect(() => {
+    const isDefault = activeFilter === 'All' && !activeTopic && activeSort === 'recent'
+
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false
+      if (isDefault) return
+    }
+
+    fetchDiscussions(true)
   }, [activeFilter, activeTopic, activeSort])
 
   async function fetchDiscussions(reset = false, cursor = null) {
@@ -41,30 +59,23 @@ export default function HomeFeed({ initialDiscussions, initialTopics }) {
     setError('')
 
     try {
-      const params = new URLSearchParams()
-      if (activeFilter !== 'All') params.set('filter', activeFilter.toLowerCase())
-      if (activeTopic) params.set('topic', activeTopic)
-      if (activeSort) params.set('sort', activeSort)
-      if (cursor) params.set('cursor', cursor)
+      const data = await getExplore({
+        filter: activeFilter !== 'All' ? activeFilter.toLowerCase() : undefined,
+        topic: activeTopic || undefined,
+        sort: activeSort,
+        cursor,
+      })
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/explore?${params.toString()}`
-      )
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || 'Failed to load discussions')
-        return
-      }
+      const normalized = (data.discussions || []).map(normalizeDiscussion)
 
       if (reset) {
-        setDiscussions(data.discussions || [])
+        setDiscussions(normalized)
       } else {
-        setDiscussions(prev => [...prev, ...(data.discussions || [])])
+        setDiscussions(prev => [...prev, ...normalized])
       }
       setNextCursor(data.next_cursor)
-    } catch {
-      setError('Failed to load discussions')
+    } catch (err) {
+      setError(err.message || 'Failed to load discussions')
     } finally {
       setLoading(false)
       setLoadingMore(false)
@@ -77,12 +88,6 @@ export default function HomeFeed({ initialDiscussions, initialTopics }) {
 
   return (
     <>
-      <div className={styles.header}>
-        <h1 className={styles.heading}>Discussions</h1>
-        <p className={styles.subheading}>Academic papers, open for discussion.</p>
-      </div>
-
-      {/* Controls — tabs + topic filter + sort */}
       <div className={styles.controlsRow}>
         <div className={styles.tabs}>
           {FILTERS.map(f => (
@@ -110,7 +115,6 @@ export default function HomeFeed({ initialDiscussions, initialTopics }) {
         </div>
       </div>
 
-      {/* Feed */}
       {loading ? (
         <p className={styles.state}>Loading...</p>
       ) : error ? (

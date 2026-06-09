@@ -1,24 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Bookmark } from 'lucide-react'
 import styles from './FeedCard.module.css'
-import { createBookmark, removeBookmark, checkBookmark } from '@/lib/api'
+import { createBookmark, removeBookmark, checkBookmark, normalizeDiscussion } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 
 /**
  * FeedCard
  *
  * Displays a single discussion in the feed.
- * Receives the shape returned by GET /explore:
- * {
- *   id, created_at, doi, title, authors_json,
- *   journal, year, comment_count, latest_activity, topics
- * }
- *
- * Unanswered discussions (comment_count === 0) render with
- * dashed border and muted styling.
  */
 
 function formatAuthors(authors) {
@@ -30,6 +23,7 @@ function formatAuthors(authors) {
 }
 
 function timeAgo(isoString) {
+  if (!isoString) return ''
   const diff = Date.now() - new Date(isoString).getTime()
   const mins = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
@@ -41,7 +35,9 @@ function timeAgo(isoString) {
   return new Date(isoString).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
-export default function FeedCard({ discussion }) {
+export default function FeedCard({ discussion: rawDiscussion }) {
+  const discussion = normalizeDiscussion(rawDiscussion)
+  const router = useRouter()
   const {
     id,
     title,
@@ -50,7 +46,8 @@ export default function FeedCard({ discussion }) {
     year,
     comment_count,
     latest_activity,
-    topics = []
+    topics = [],
+    username
   } = discussion
 
   const { user } = useAuth()
@@ -58,6 +55,7 @@ export default function FeedCard({ discussion }) {
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
 
   const unanswered = comment_count === 0
+  const authorLine = formatAuthors(authors_json)
 
   useEffect(() => {
     if (user) {
@@ -70,7 +68,11 @@ export default function FeedCard({ discussion }) {
   async function toggleBookmark(e) {
     e.preventDefault()
     e.stopPropagation()
-    if (!user || bookmarkLoading) return
+    if (!user) {
+      router.push('/login')
+      return
+    }
+    if (bookmarkLoading) return
 
     setBookmarkLoading(true)
     try {
@@ -89,30 +91,41 @@ export default function FeedCard({ discussion }) {
   }
 
   return (
-    <div className={`${styles.card} ${unanswered ? styles.unanswered : ''}`}>
-      <Link href={`/d/${id}`} className={styles.cardLink}>
-        {/* Paper title */}
-        <h2 className={styles.title}>{title}</h2>
+    <article className={styles.card}>
+      <div className={styles.cardBody}>
+        <Link href={`/d/${id}`} className={styles.titleLink}>
+          <h2 className={`${styles.title} paper-title`}>{title}</h2>
+        </Link>
 
-        {/* Metadata row */}
         <div className={styles.meta}>
-          {formatAuthors(authors_json) && (
-            <span>{formatAuthors(authors_json)}</span>
+          {username && (
+            <span className={styles.metaItem}>
+              <span className={styles.metaLabel}>Started by</span>
+              <Link href={`/u/${username}`} className={styles.author}>
+                {username}
+              </Link>
+            </span>
           )}
-          {journal && <span>{journal}</span>}
-          {year && <span>{year}</span>}
+          {authorLine && <span className={styles.metaItem}>{authorLine}</span>}
+          {journal && <span className={styles.metaItem}>{journal}</span>}
+          {year && <span className={styles.metaItem}>{year}</span>}
         </div>
 
-        {/* Topics */}
         {topics.length > 0 && (
           <div className={styles.tags}>
             {topics.map(t => (
-              <span key={t.slug} className={styles.tag}>{t.name}</span>
+              <button
+                key={t.slug}
+                type="button"
+                className={styles.tag}
+                onClick={() => router.push(`/explore?topic=${encodeURIComponent(t.slug)}`)}
+              >
+                {t.name}
+              </button>
             ))}
           </div>
         )}
 
-        {/* Footer row */}
         <div className={styles.footer}>
           <span className={styles.activity}>
             {unanswered
@@ -120,20 +133,21 @@ export default function FeedCard({ discussion }) {
               : `${comment_count} comment${comment_count === 1 ? '' : 's'}`
             }
           </span>
-          <span className={styles.activity}>{timeAgo(latest_activity)}</span>
+          {latest_activity && (
+            <span className={styles.activity}>{timeAgo(latest_activity)}</span>
+          )}
         </div>
-      </Link>
+      </div>
 
-      {user && (
-        <button
-          onClick={toggleBookmark}
-          className={`${styles.bookmarkBtn} ${bookmarked ? styles.bookmarked : ''}`}
-          disabled={bookmarkLoading}
-          aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark discussion'}
-        >
-          <Bookmark size={18} fill={bookmarked ? 'currentColor' : 'none'} />
-        </button>
-      )}
-    </div>
+      <button
+        onClick={toggleBookmark}
+        className={`${styles.bookmarkBtn} ${bookmarked ? styles.bookmarked : ''}`}
+        disabled={bookmarkLoading}
+        aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark discussion'}
+        title={user ? (bookmarked ? 'Remove bookmark' : 'Save discussion') : 'Sign in to bookmark'}
+      >
+        <Bookmark size={18} fill={bookmarked ? 'currentColor' : 'none'} />
+      </button>
+    </article>
   )
 }

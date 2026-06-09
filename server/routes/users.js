@@ -4,6 +4,68 @@ const pool = require('../db')
 const authenticateToken = require('../middleware/authenticateToken')
 const optionalAuth = require('../middleware/optionalAuth')
 
+router.get('/suggested', optionalAuth, async (req, res) => {
+  try {
+    const currentUserId = req.user?.userId
+
+    let query = `
+      SELECT u.id, u.username, u.affiliation,
+             (SELECT COUNT(*) FROM discussions WHERE created_by = u.id) as discussion_count,
+             (SELECT COUNT(*) FROM follows WHERE following_id = u.id) as follower_count
+      FROM users u
+    `
+
+    const params = []
+    if (currentUserId) {
+      query += `
+        WHERE u.id != $1
+        AND u.id NOT IN (
+          SELECT following_id FROM follows WHERE follower_id = $1
+        )
+      `
+      params.push(currentUserId)
+    }
+
+    query += `
+      ORDER BY follower_count DESC, discussion_count DESC
+      LIMIT 10
+    `
+
+    const result = await pool.query(query, params)
+
+    const users = result.rows.map(u => ({
+      ...u,
+      is_following: false
+    }))
+
+    res.json({ users })
+  } catch (err) {
+    console.error('GET /users/suggested error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, username, bio, avatar_url, profile_visibility, affiliation,
+              location, website_url, twitter_handle, google_scholar_url,
+              orcid_id, created_at
+       FROM users WHERE id = $1`,
+      [req.user.userId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    res.json(result.rows[0])
+  } catch (err) {
+    console.error('GET /users/me error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.get('/:username', optionalAuth, async (req, res) => {
   try {
     const { username } = req.params
@@ -23,20 +85,27 @@ router.get('/:username', optionalAuth, async (req, res) => {
     const user = userResult.rows[0]
     const visibility = user.profile_visibility || { bio: true, joined_date: true, activity: true }
 
+    const isOwnProfile = req.user?.userId === user.id
+    const showActivity = visibility.activity || isOwnProfile
+
     const profile = {
       username: user.username,
       avatar_url: user.avatar_url,
-      bio: visibility.bio ? user.bio : null,
-      joined_date: visibility.joined_date ? user.created_at : null,
+      bio: visibility.bio || isOwnProfile ? user.bio : null,
+      joined_date: visibility.joined_date || isOwnProfile ? user.created_at : null,
       affiliation: user.affiliation,
       location: user.location,
       website_url: user.website_url,
       twitter_handle: user.twitter_handle,
       google_scholar_url: user.google_scholar_url,
       orcid_id: user.orcid_id,
+      activity_visible: visibility.activity,
+      is_own_profile: isOwnProfile,
+      discussions: [],
+      comments: [],
     }
 
-    if (visibility.activity) {
+    if (showActivity) {
       const discussionsResult = await pool.query(
         `SELECT d.id, p.title, p.authors_json, p.journal, p.year,
                 COUNT(c.id)::int AS comment_count,

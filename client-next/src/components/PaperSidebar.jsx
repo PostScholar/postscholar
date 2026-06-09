@@ -1,7 +1,9 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
+import { getDiscussionStats } from '@/lib/api'
 import styles from './PaperSidebar.module.css'
 
 /**
@@ -14,6 +16,22 @@ import styles from './PaperSidebar.module.css'
 export default function PaperSidebar({ paper, discussionId }) {
   const { user } = useAuth()
   const router = useRouter()
+  const [stats, setStats] = useState(null)
+  const [loadingStats, setLoadingStats] = useState(true)
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const data = await getDiscussionStats(discussionId)
+        setStats(data)
+      } catch (err) {
+        console.error('Failed to load discussion stats:', err)
+      } finally {
+        setLoadingStats(false)
+      }
+    }
+    fetchStats()
+  }, [discussionId])
 
   function handleVerify() {
     if (!user) {
@@ -25,6 +43,29 @@ export default function PaperSidebar({ paper, discussionId }) {
 
   return (
     <div className={styles.sidebar}>
+      {/* Discussion stats */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Discussion stats</div>
+        <div className={styles.statList}>
+          {loadingStats ? (
+            <div className={styles.stat}>
+              <span className={styles.statValue}>Loading...</span>
+            </div>
+          ) : (
+            <>
+              <div className={styles.stat}>
+                <span className={styles.statLabel}>Views</span>
+                <span className={styles.statValue}>{stats?.view_count || 0}</span>
+              </div>
+              <div className={styles.stat}>
+                <span className={styles.statLabel}>Comments</span>
+                <span className={styles.statValue}>{stats?.comment_count || 0}</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Paper stats */}
       <div className={styles.section}>
         <div className={styles.sectionTitle}>About this paper</div>

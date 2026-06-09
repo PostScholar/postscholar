@@ -3,11 +3,12 @@ import Layout from '@/components/Layout'
 import PaperHeader from '@/components/PaperHeader'
 import PaperSidebar from '@/components/PaperSidebar'
 import DiscussionComments from './DiscussionComments'
+import { getServerApiUrl } from '@/lib/config'
 import styles from './Discussion.module.css'
 
 async function getDiscussionData(id) {
   try {
-    const res = await fetch(`${process.env.API_URL}/discussions/${id}/paper`, {
+    const res = await fetch(`${getServerApiUrl()}/discussions/${id}/paper`, {
       cache: 'no-store'
     })
     if (!res.ok) return null

@@ -14,7 +14,8 @@ export function ThemeProvider({ children }) {
   }, [])
 
   function toggleTheme() {
-    const next = theme === 'light' ? 'dark' : 'light'
+    const order = ['light', 'dim', 'dark']
+    const next = order[(order.indexOf(theme) + 1) % order.length]
     setTheme(next)
     localStorage.setItem('ps-theme', next)
     document.documentElement.setAttribute('data-theme', next)

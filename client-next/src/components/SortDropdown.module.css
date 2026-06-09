@@ -83,3 +83,21 @@
   color: var(--accent);
   background: var(--accent-subtle);
 }
+
+@media (max-width: 1024px) {
+  .wrapper {
+    width: 100%;
+  }
+
+  .trigger {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .panel {
+    left: 0;
+    right: 0;
+    min-width: 0;
+    width: 100%;
+  }
+}

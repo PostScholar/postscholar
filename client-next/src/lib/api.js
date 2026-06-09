@@ -1,4 +1,6 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL
+import { getApiUrl } from './config'
+
+const BASE_URL = getApiUrl()
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -23,7 +25,10 @@ export const api = {
   post:   (path, body)  => request(path, { method: 'POST',   body: JSON.stringify(body) }),
   patch:  (path, body)  => request(path, { method: 'PATCH',  body: JSON.stringify(body) }),
   put:    (path, body)  => request(path, { method: 'PUT',    body: JSON.stringify(body) }),
-  delete: (path)        => request(path, { method: 'DELETE' }),
+  delete: (path, body)  => request(path, {
+    method: 'DELETE',
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  }),
 }
 
 // ---------------------------------------------------------------------------
@@ -154,8 +159,8 @@ export function updateProfile(data) {
 // Search
 // ---------------------------------------------------------------------------
 
-export function searchDiscussions(q) {
-  return api.get(`/search?q=${encodeURIComponent(q)}`)
+export function searchDiscussions(q, type = 'all') {
+  return api.get(`/search?q=${encodeURIComponent(q)}&type=${type}`)
 }
 
 // ---------------------------------------------------------------------------
@@ -234,10 +239,86 @@ export function getDiscussionStats(discussionId) {
   return api.get(`/discussions/${discussionId}/stats`)
 }
 
-// ---------------------------------------------------------------------------
-// Paper Metrics
-// ---------------------------------------------------------------------------
+export function getFollowingFeed(cursor = null) {
+  const query = cursor ? `?cursor=${cursor}` : ''
+  return api.get(`/discussions/following${query}`)
+}
 
-export function getPaperMetrics(doi) {
-  return api.get(`/papers/metrics/${doi}`)
+export function getMentions(unreadOnly = false) {
+  const query = unreadOnly ? '?unread_only=true' : ''
+  return api.get(`/mentions${query}`)
+}
+
+export function markMentionRead(mentionId) {
+  return api.patch(`/mentions/${mentionId}/read`)
+}
+
+export function markAllMentionsRead() {
+  return api.patch('/mentions/mark-all-read')
+}
+
+export function getUnreadMentionCount() {
+  return api.get('/mentions/unread-count')
+}
+
+export function followTopic(topic) {
+  return api.post('/topic-follows', { topic })
+}
+
+export function unfollowTopic(topic) {
+  return api.delete('/topic-follows', { topic })
+}
+
+export function getMyProfile() {
+  return api.get('/users/me')
+}
+
+export function getFollowedTopics() {
+  return api.get('/topic-follows')
+}
+
+export function checkTopicFollow(topic) {
+  return api.get(`/topic-follows/check?topic=${encodeURIComponent(topic)}`)
+}
+
+export function getExplore({ filter, topic, sort, cursor } = {}) {
+  const params = new URLSearchParams()
+  if (filter) params.set('filter', filter)
+  if (topic) params.set('topic', topic)
+  if (sort) params.set('sort', sort)
+  if (cursor) params.set('cursor', cursor)
+  const query = params.toString() ? `?${params.toString()}` : ''
+  return api.get(`/explore${query}`)
+}
+
+export function getTopics() {
+  return api.get('/topics')
+}
+
+export function getSuggestedUsers() {
+  return api.get('/users/suggested')
+}
+
+export function logout() {
+  return api.post('/auth/logout', {})
+}
+
+export function normalizeDiscussion(discussion) {
+  if (!discussion) return discussion
+
+  let topics = discussion.topics || []
+  if (typeof topics === 'string') {
+    try { topics = JSON.parse(topics) } catch { topics = [] }
+  }
+
+  return {
+    ...discussion,
+    username: discussion.username || discussion.started_by || null,
+    latest_activity:
+      discussion.latest_activity ||
+      discussion.bookmarked_at ||
+      discussion.discussion_created_at ||
+      discussion.created_at,
+    topics: Array.isArray(topics) ? topics : [],
+  }
 }

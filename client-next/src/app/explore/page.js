@@ -1,6 +1,7 @@
-import Link from 'next/link'
 import Layout from '@/components/Layout'
 import ExploreFeed from './ExploreFeed'
+import { getInitialFeedData } from '@/lib/feedData'
+import { Suspense } from 'react'
 
 export const metadata = {
   title: 'Explore discussions — PostScholar',
@@ -8,46 +9,18 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic'
 
-async function getInitialData() {
-  try {
-    // Fetch initial discussions and topics
-    const [discussionsRes, topicsRes] = await Promise.all([
-      fetch(`${process.env.API_URL}/explore`, {
-        cache: 'no-store'
-      }),
-      fetch(`${process.env.API_URL}/topics`, {
-        cache: 'no-store'
-      })
-    ])
-
-    const [discussionsData, topicsData] = await Promise.all([
-      discussionsRes.ok ? discussionsRes.json() : { discussions: [] },
-      topicsRes.ok ? topicsRes.json() : { topics: [] }
-    ])
-
-    return {
-      discussions: discussionsData.discussions || [],
-      topics: topicsData.topics || []
-    }
-  } catch (error) {
-    console.error('Failed to fetch initial data:', error)
-    return {
-      discussions: [],
-      topics: []
-    }
-  }
-}
-
 export default async function ExplorePage() {
-  const { discussions, topics } = await getInitialData()
+  const { discussions, topics, nextCursor } = await getInitialFeedData()
 
   return (
-    <Layout>
-      <Link href="/" className="backLink">← Home</Link>
-      <ExploreFeed
-        initialDiscussions={discussions}
-        initialTopics={topics}
-      />
+    <Layout wide>
+      <Suspense fallback={<p>Loading...</p>}>
+        <ExploreFeed
+          initialDiscussions={discussions}
+          initialTopics={topics}
+          initialNextCursor={nextCursor}
+        />
+      </Suspense>
     </Layout>
   )
 }
