@@ -77,6 +77,7 @@ export default async function DiscussionPage({ params }) {
           startedBy={started_by}
           discussionCreatedAt={discussion_created_at}
           customTags={custom_tags || []}
+          discussionId={id}
         />
       )}
       <div className={styles.divider} />

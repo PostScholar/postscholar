@@ -3,6 +3,7 @@ const router = express.Router()
 const pool = require('../db')
 const authenticateToken = require('../middleware/authenticateToken')
 const optionalAuth = require('../middleware/optionalAuth')
+const sanitizeHtml = require('sanitize-html')
 
 /**
  * buildTree(comments, verifiedUserIds)
@@ -48,6 +49,20 @@ async function getVerifiedUserIds(discussion_id) {
     [discussion_id]
   )
   return new Set(result.rows.map(r => r.user_id))
+}
+
+/**
+ * sanitizeComment(body)
+ *
+ * Sanitizes user input to prevent XSS attacks.
+ * Allows basic formatting tags but strips dangerous HTML/scripts.
+ */
+function sanitizeComment(body) {
+  return sanitizeHtml(body, {
+    allowedTags: ['b', 'i', 'em', 'strong', 'code', 'pre', 'p', 'br'],
+    allowedAttributes: {},
+    disallowedTagsMode: 'recursiveEscape'
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -274,11 +289,13 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
       depth = parentCheck.rows[0].depth + 1
     }
 
+    const sanitizedBody = sanitizeComment(body.trim())
+
     const result = await pool.query(
       `INSERT INTO comments (discussion_id, user_id, parent_comment_id, body, depth)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *, (SELECT username FROM users WHERE id = $2) AS username`,
-      [discussion_id, req.user.userId, parent_comment_id || null, body.trim(), depth]
+      [discussion_id, req.user.userId, parent_comment_id || null, sanitizedBody, depth]
     )
 
     const comment = result.rows[0]
@@ -339,11 +356,13 @@ router.patch('/comments/:id', authenticateToken, async (req, res) => {
       }
     }
 
+    const sanitizedBody = sanitizeComment(body.trim())
+
     const result = await pool.query(
       `UPDATE comments SET body = $1
        WHERE id = $2 AND user_id = $3
        RETURNING *`,
-      [body.trim(), id, req.user.userId]
+      [sanitizedBody, id, req.user.userId]
     )
 
     if (result.rows.length === 0) {
@@ -532,6 +551,60 @@ router.post('/', authenticateToken, async (req, res) => {
     }
   } catch (err) {
     console.error('POST /discussions error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// POST /discussions/:id/view
+// ---------------------------------------------------------------------------
+// Track a discussion view (fire and forget, never fails)
+// ---------------------------------------------------------------------------
+router.post('/:id/view', optionalAuth, async (req, res) => {
+  try {
+    const crypto = require('crypto')
+    const ipHash = crypto
+      .createHash('sha256')
+      .update(req.ip || req.connection.remoteAddress || '')
+      .digest('hex')
+      .slice(0, 16)
+
+    await pool.query(
+      `INSERT INTO discussion_views (discussion_id, user_id, ip_hash)
+       VALUES ($1, $2, $3)
+       ON CONFLICT DO NOTHING`,
+      [req.params.id, req.user?.userId || null, ipHash]
+    )
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('View tracking error:', err)
+    res.json({ ok: true }) // Never fail on view tracking
+  }
+})
+
+// ---------------------------------------------------------------------------
+// GET /discussions/:id/stats
+// ---------------------------------------------------------------------------
+// Get view count and comment count for a discussion
+// ---------------------------------------------------------------------------
+router.get('/:id/stats', async (req, res) => {
+  try {
+    const [views, comments] = await Promise.all([
+      pool.query(
+        'SELECT COUNT(DISTINCT ip_hash) as count FROM discussion_views WHERE discussion_id = $1',
+        [req.params.id]
+      ),
+      pool.query(
+        'SELECT COUNT(*) as count FROM comments WHERE discussion_id = $1',
+        [req.params.id]
+      )
+    ])
+    res.json({
+      view_count: parseInt(views.rows[0].count),
+      comment_count: parseInt(comments.rows[0].count)
+    })
+  } catch (err) {
+    console.error('GET /discussions/:id/stats error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

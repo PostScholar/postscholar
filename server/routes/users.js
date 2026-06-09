@@ -9,7 +9,9 @@ router.get('/:username', optionalAuth, async (req, res) => {
     const { username } = req.params
 
     const userResult = await pool.query(
-      `SELECT id, username, bio, avatar_url, profile_visibility, created_at
+      `SELECT id, username, bio, avatar_url, profile_visibility, affiliation,
+              location, website_url, twitter_handle, google_scholar_url,
+              orcid_id, created_at
        FROM users WHERE username = $1`,
       [username]
     )
@@ -26,6 +28,12 @@ router.get('/:username', optionalAuth, async (req, res) => {
       avatar_url: user.avatar_url,
       bio: visibility.bio ? user.bio : null,
       joined_date: visibility.joined_date ? user.created_at : null,
+      affiliation: user.affiliation,
+      location: user.location,
+      website_url: user.website_url,
+      twitter_handle: user.twitter_handle,
+      google_scholar_url: user.google_scholar_url,
+      orcid_id: user.orcid_id,
     }
 
     if (visibility.activity) {
@@ -69,20 +77,67 @@ router.get('/:username', optionalAuth, async (req, res) => {
 
 router.patch('/me', authenticateToken, async (req, res) => {
   try {
-    const { bio, profile_visibility } = req.body
+    const {
+      bio,
+      profile_visibility,
+      affiliation,
+      location,
+      website_url,
+      twitter_handle,
+      google_scholar_url
+    } = req.body
 
-    const result = await pool.query(
-      `UPDATE users
-       SET bio = COALESCE($1, bio),
-           profile_visibility = COALESCE($2, profile_visibility)
-       WHERE id = $3
-       RETURNING id, username, bio, avatar_url, profile_visibility, created_at`,
-      [
-        bio !== undefined ? bio.trim() : null,
-        profile_visibility ? JSON.stringify(profile_visibility) : null,
-        req.user.userId
-      ]
-    )
+    // Build dynamic update query
+    const updates = []
+    const values = []
+    let paramCount = 1
+
+    if (bio !== undefined) {
+      updates.push(`bio = $${paramCount++}`)
+      values.push(bio.trim())
+    }
+    if (profile_visibility !== undefined) {
+      updates.push(`profile_visibility = $${paramCount++}`)
+      values.push(JSON.stringify(profile_visibility))
+    }
+    if (affiliation !== undefined) {
+      updates.push(`affiliation = $${paramCount++}`)
+      values.push(affiliation.trim() || null)
+    }
+    if (location !== undefined) {
+      updates.push(`location = $${paramCount++}`)
+      values.push(location.trim() || null)
+    }
+    if (website_url !== undefined) {
+      updates.push(`website_url = $${paramCount++}`)
+      values.push(website_url.trim() || null)
+    }
+    if (twitter_handle !== undefined) {
+      // Strip @ if present
+      const handle = twitter_handle.trim().replace(/^@/, '') || null
+      updates.push(`twitter_handle = $${paramCount++}`)
+      values.push(handle)
+    }
+    if (google_scholar_url !== undefined) {
+      updates.push(`google_scholar_url = $${paramCount++}`)
+      values.push(google_scholar_url.trim() || null)
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' })
+    }
+
+    values.push(req.user.userId)
+    const query = `
+      UPDATE users
+      SET ${updates.join(', ')}
+      WHERE id = $${paramCount}
+      RETURNING id, username, bio, avatar_url, profile_visibility, affiliation,
+                location, website_url, twitter_handle, google_scholar_url,
+                orcid_id, created_at
+    `
+
+    const result = await pool.query(query, values)
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' })

@@ -1,7 +1,11 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { Bookmark } from 'lucide-react'
 import styles from './FeedCard.module.css'
+import { createBookmark, removeBookmark, checkBookmark } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 
 /**
  * FeedCard
@@ -49,44 +53,87 @@ export default function FeedCard({ discussion }) {
     topics = []
   } = discussion
 
+  const { user } = useAuth()
+  const [bookmarked, setBookmarked] = useState(false)
+  const [bookmarkLoading, setBookmarkLoading] = useState(false)
+
   const unanswered = comment_count === 0
 
+  useEffect(() => {
+    if (user) {
+      checkBookmark(id)
+        .then(data => setBookmarked(data.bookmarked))
+        .catch(() => {})
+    }
+  }, [id, user])
+
+  async function toggleBookmark(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!user || bookmarkLoading) return
+
+    setBookmarkLoading(true)
+    try {
+      if (bookmarked) {
+        await removeBookmark(id)
+        setBookmarked(false)
+      } else {
+        await createBookmark(id)
+        setBookmarked(true)
+      }
+    } catch (err) {
+      console.error('Bookmark error:', err)
+    } finally {
+      setBookmarkLoading(false)
+    }
+  }
+
   return (
-    <Link
-      href={`/d/${id}`}
-      className={`${styles.card} ${unanswered ? styles.unanswered : ''}`}
-    >
-      {/* Paper title */}
-      <h2 className={styles.title}>{title}</h2>
+    <div className={`${styles.card} ${unanswered ? styles.unanswered : ''}`}>
+      <Link href={`/d/${id}`} className={styles.cardLink}>
+        {/* Paper title */}
+        <h2 className={styles.title}>{title}</h2>
 
-      {/* Metadata row */}
-      <div className={styles.meta}>
-        {formatAuthors(authors_json) && (
-          <span>{formatAuthors(authors_json)}</span>
-        )}
-        {journal && <span>{journal}</span>}
-        {year && <span>{year}</span>}
-      </div>
-
-      {/* Topics */}
-      {topics.length > 0 && (
-        <div className={styles.tags}>
-          {topics.map(t => (
-            <span key={t.slug} className={styles.tag}>{t.name}</span>
-          ))}
+        {/* Metadata row */}
+        <div className={styles.meta}>
+          {formatAuthors(authors_json) && (
+            <span>{formatAuthors(authors_json)}</span>
+          )}
+          {journal && <span>{journal}</span>}
+          {year && <span>{year}</span>}
         </div>
-      )}
 
-      {/* Footer row */}
-      <div className={styles.footer}>
-        <span className={styles.activity}>
-          {unanswered
-            ? 'No comments yet'
-            : `${comment_count} comment${comment_count === 1 ? '' : 's'}`
-          }
-        </span>
-        <span className={styles.activity}>{timeAgo(latest_activity)}</span>
-      </div>
-    </Link>
+        {/* Topics */}
+        {topics.length > 0 && (
+          <div className={styles.tags}>
+            {topics.map(t => (
+              <span key={t.slug} className={styles.tag}>{t.name}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Footer row */}
+        <div className={styles.footer}>
+          <span className={styles.activity}>
+            {unanswered
+              ? 'No comments yet'
+              : `${comment_count} comment${comment_count === 1 ? '' : 's'}`
+            }
+          </span>
+          <span className={styles.activity}>{timeAgo(latest_activity)}</span>
+        </div>
+      </Link>
+
+      {user && (
+        <button
+          onClick={toggleBookmark}
+          className={`${styles.bookmarkBtn} ${bookmarked ? styles.bookmarked : ''}`}
+          disabled={bookmarkLoading}
+          aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark discussion'}
+        >
+          <Bookmark size={18} fill={bookmarked ? 'currentColor' : 'none'} />
+        </button>
+      )}
+    </div>
   )
 }

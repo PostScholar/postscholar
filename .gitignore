@@ -22,4 +22,10 @@ Thumbs.db
 .vite/
 
 # Railway and Vercel
-.vercel/cookies.txt
+.vercel/
+cookies.txt
+
+# Claude planning documents
+PROPOSAL_UI_UX_IMPROVEMENTS.md
+ROADMAP_UPDATED.md
+IMPLEMENTATION_PLAN.md

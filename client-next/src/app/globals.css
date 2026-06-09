@@ -37,6 +37,27 @@
   --badge-text:     var(--accent);
   --badge-border:   color-mix(in srgb, var(--accent) 30%, transparent);
 
+  /* Semantic colors */
+  --success:        #2d7a5e;
+  --success-bg:     rgba(45, 122, 94, 0.08);
+  --success-border: rgba(45, 122, 94, 0.3);
+
+  --warning:        #d97706;
+  --warning-bg:     rgba(217, 119, 6, 0.08);
+  --warning-border: rgba(217, 119, 6, 0.3);
+
+  --info:           #2563eb;
+  --info-bg:        rgba(37, 99, 235, 0.08);
+  --info-border:    rgba(37, 99, 235, 0.3);
+
+  --error:          #dc2626;
+  --error-bg:       rgba(220, 38, 38, 0.08);
+  --error-border:   rgba(220, 38, 38, 0.3);
+
+  /* Voting colors */
+  --upvote:         #10b981;
+  --downvote:       #ef4444;
+
   --shadow-sm:      0 1px 2px rgba(0,0,0,0.06);
   --shadow-md:      0 2px 8px rgba(0,0,0,0.08);
 }
@@ -63,6 +84,27 @@
   --badge-text:     color-mix(in srgb, var(--accent) 80%, #fff);
   --badge-border:   color-mix(in srgb, var(--accent) 35%, transparent);
 
+  /* Semantic colors */
+  --success:        #34d399;
+  --success-bg:     rgba(52, 211, 153, 0.12);
+  --success-border: rgba(52, 211, 153, 0.35);
+
+  --warning:        #fbbf24;
+  --warning-bg:     rgba(251, 191, 36, 0.12);
+  --warning-border: rgba(251, 191, 36, 0.35);
+
+  --info:           #60a5fa;
+  --info-bg:        rgba(96, 165, 250, 0.12);
+  --info-border:    rgba(96, 165, 250, 0.35);
+
+  --error:          #f87171;
+  --error-bg:       rgba(248, 113, 113, 0.12);
+  --error-border:   rgba(248, 113, 113, 0.35);
+
+  /* Voting colors */
+  --upvote:         #10b981;
+  --downvote:       #ef4444;
+
   --shadow-sm:      0 1px 2px rgba(0,0,0,0.25);
   --shadow-md:      0 2px 8px rgba(0,0,0,0.35);
 }
@@ -88,6 +130,27 @@
   --badge-bg:       color-mix(in srgb, var(--accent) 12%, transparent);
   --badge-text:     color-mix(in srgb, var(--accent) 85%, #fff);
   --badge-border:   color-mix(in srgb, var(--accent) 30%, transparent);
+
+  /* Semantic colors */
+  --success:        #34d399;
+  --success-bg:     rgba(52, 211, 153, 0.12);
+  --success-border: rgba(52, 211, 153, 0.35);
+
+  --warning:        #fbbf24;
+  --warning-bg:     rgba(251, 191, 36, 0.12);
+  --warning-border: rgba(251, 191, 36, 0.35);
+
+  --info:           #60a5fa;
+  --info-bg:        rgba(96, 165, 250, 0.12);
+  --info-border:    rgba(96, 165, 250, 0.35);
+
+  --error:          #f87171;
+  --error-bg:       rgba(248, 113, 113, 0.12);
+  --error-border:   rgba(248, 113, 113, 0.35);
+
+  /* Voting colors */
+  --upvote:         #10b981;
+  --downvote:       #ef4444;
 
   --shadow-sm:      0 1px 2px rgba(0,0,0,0.4);
   --shadow-md:      0 2px 8px rgba(0,0,0,0.5);

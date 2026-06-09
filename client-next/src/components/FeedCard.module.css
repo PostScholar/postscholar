@@ -1,12 +1,19 @@
 .card {
   padding: var(--space-4) 0;
   border-bottom: 1px solid var(--border);
-  display: block;
-  text-decoration: none;
-  color: inherit;
+  display: flex;
+  gap: var(--space-3);
+  position: relative;
 }
 
-.card:hover .title {
+.cardLink {
+  flex: 1;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.cardLink:hover .title {
   color: var(--accent);
 }
 
@@ -63,6 +70,34 @@
 
 .unanswered {
   opacity: 0.7;
+}
+
+.bookmarkBtn {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.bookmarkBtn:hover {
+  color: var(--accent);
+}
+
+.bookmarkBtn.bookmarked {
+  color: var(--accent);
+}
+
+.bookmarkBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 640px) {

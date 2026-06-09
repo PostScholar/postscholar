@@ -1,0 +1,69 @@
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-raised) 0%,
+    var(--bg-base) 50%,
+    var(--bg-raised) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: var(--radius-sm);
+}
+
+.feedCard {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.meta {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-1);
+}
+
+.paperHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.badge {
+  margin-bottom: var(--space-1);
+}
+
+.comment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.commentHeader {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.commentActions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}

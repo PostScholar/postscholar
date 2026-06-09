@@ -157,3 +157,87 @@ export function updateProfile(data) {
 export function searchDiscussions(q) {
   return api.get(`/search?q=${encodeURIComponent(q)}`)
 }
+
+// ---------------------------------------------------------------------------
+// Bookmarks
+// ---------------------------------------------------------------------------
+
+export function createBookmark(discussionId) {
+  return api.post('/bookmarks', { discussionId })
+}
+
+export function removeBookmark(discussionId) {
+  return api.delete(`/bookmarks/${discussionId}`)
+}
+
+export function getBookmarks() {
+  return api.get('/bookmarks')
+}
+
+export function checkBookmark(discussionId) {
+  return api.get(`/bookmarks/check/${discussionId}`)
+}
+
+// ---------------------------------------------------------------------------
+// Reports
+// ---------------------------------------------------------------------------
+
+export function submitReport({ comment_id, discussion_id, reason, description }) {
+  return api.post('/reports', { comment_id, discussion_id, reason, description })
+}
+
+export function getReports(status = 'pending') {
+  return api.get(`/reports?status=${encodeURIComponent(status)}`)
+}
+
+export function updateReportStatus(reportId, status) {
+  return api.patch(`/reports/${reportId}`, { status })
+}
+
+// ---------------------------------------------------------------------------
+// Follows
+// ---------------------------------------------------------------------------
+
+export function followUser(username) {
+  return api.post(`/follows/${username}`)
+}
+
+export function unfollowUser(username) {
+  return api.delete(`/follows/${username}`)
+}
+
+export function getFollowStatus(username) {
+  return api.get(`/follows/${username}/status`)
+}
+
+export function getFollowCounts(username) {
+  return api.get(`/follows/${username}/counts`)
+}
+
+export function getFollowers(username) {
+  return api.get(`/follows/${username}/followers`)
+}
+
+export function getFollowing(username) {
+  return api.get(`/follows/${username}/following`)
+}
+
+// ---------------------------------------------------------------------------
+// View Tracking
+// ---------------------------------------------------------------------------
+
+export function trackView(discussionId) {
+  return api.post(`/discussions/${discussionId}/view`)
+}
+
+export function getDiscussionStats(discussionId) {
+  return api.get(`/discussions/${discussionId}/stats`)
+}
+
+// ---------------------------------------------------------------------------
+// Paper Metrics
+// ---------------------------------------------------------------------------
+
+export function getPaperMetrics(doi) {
+  return api.get(`/papers/metrics/${doi}`)
+}

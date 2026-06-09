@@ -16,12 +16,112 @@
   width: fit-content;
 }
 
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
 .title {
+  flex: 1;
   font-family: var(--font-serif);
   font-size: var(--text-3xl);
   font-weight: 600;
   color: var(--text-primary);
   line-height: var(--leading-tight);
+  margin: 0;
+}
+
+.actionButtons {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.citeDropdown {
+  position: relative;
+}
+
+.citeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+  margin-top: 2px;
+}
+
+.citeBtn:hover {
+  color: var(--accent);
+}
+
+.citeMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--space-1);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  z-index: 10;
+  min-width: 120px;
+}
+
+.citeOption {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.citeOption:hover {
+  background: var(--bg-base);
+}
+
+.copiedMessage {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--success);
+  text-align: center;
+  font-weight: 500;
+}
+
+.bookmarkBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+  margin-top: 2px;
+}
+
+.bookmarkBtn:hover {
+  color: var(--accent);
+}
+
+.bookmarkBtn.bookmarked {
+  color: var(--accent);
+}
+
+.bookmarkBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .authors {

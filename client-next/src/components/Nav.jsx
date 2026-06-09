@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
+import { Search, Moon, Sun, Menu, X } from 'lucide-react'
 import styles from './Nav.module.css'
 
 /**
@@ -54,7 +55,7 @@ export default function Nav() {
             onChange={e => setSearchQuery(e.target.value)}
           />
           <button type="submit" className={styles.searchBtn} aria-label="Search">
-            ↵
+            <Search size={16} />
           </button>
         </form>
 
@@ -64,7 +65,7 @@ export default function Nav() {
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
         >
-          {menuOpen ? '✕' : '☰'}
+          {menuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
         {/* Right side */}
@@ -76,7 +77,7 @@ export default function Nav() {
             Discussions
           </Link>
           <button onClick={toggleTheme} className={styles.themeToggle} aria-label="Toggle theme">
-            {theme === 'light' ? '☾' : '☀'}
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
           {user ? (
             <>

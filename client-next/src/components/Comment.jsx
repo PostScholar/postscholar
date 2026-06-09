@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Flag } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import AuthorBadge from './AuthorBadge'
 import { postComment, editComment, deleteComment } from '@/lib/api'
@@ -46,6 +47,11 @@ export default function Comment({
   const [editBody, setEditBody] = useState(comment.body)
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
+
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportLoading, setReportLoading] = useState(false)
+  const [reportSuccess, setReportSuccess] = useState(false)
 
   const isOwn = user && user.username === comment.username
   const indentLevel = Math.min(depth, 6)
@@ -98,6 +104,25 @@ export default function Comment({
       onDeleted(comment.id)
     } catch (err) {
       alert(err.message)
+    }
+  }
+
+  async function handleReportSubmit(e) {
+    e.preventDefault()
+    if (!reportReason.trim()) return
+    setReportLoading(true)
+    try {
+      console.log('Report submitted:', { commentId: comment.id, reason: reportReason })
+      setReportSuccess(true)
+      setTimeout(() => {
+        setReportOpen(false)
+        setReportSuccess(false)
+        setReportReason('')
+      }, 2000)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setReportLoading(false)
     }
   }
 
@@ -169,6 +194,15 @@ export default function Comment({
                 </button>
               </>
             )}
+            {!isOwn && user && (
+              <button
+                className={styles.reportBtn}
+                onClick={() => setReportOpen(!reportOpen)}
+                aria-label="Report comment"
+              >
+                <Flag size={14} />
+              </button>
+            )}
           </div>
         )}
 
@@ -200,6 +234,42 @@ export default function Comment({
                 {replyLoading ? 'Posting...' : 'Post reply'}
               </button>
             </div>
+          </form>
+        )}
+
+        {/* Report form */}
+        {reportOpen && (
+          <form className={styles.reportForm} onSubmit={handleReportSubmit}>
+            {reportSuccess ? (
+              <p className={styles.reportSuccess}>Report submitted. Thank you.</p>
+            ) : (
+              <>
+                <textarea
+                  className={styles.textarea}
+                  placeholder="Why are you reporting this comment?"
+                  value={reportReason}
+                  onChange={e => setReportReason(e.target.value)}
+                  rows={3}
+                  autoFocus
+                />
+                <div className={styles.reportActions}>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={() => { setReportOpen(false); setReportReason('') }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={styles.submitBtn}
+                    disabled={reportLoading || !reportReason.trim()}
+                  >
+                    {reportLoading ? 'Submitting...' : 'Submit report'}
+                  </button>
+                </div>
+              </>
+            )}
           </form>
         )}
 

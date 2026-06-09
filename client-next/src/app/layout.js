@@ -1,5 +1,6 @@
 import './globals.css'
 import Providers from './Providers'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 export const metadata = {
   title: 'PostScholar — Academic discussion for published research',
@@ -17,7 +18,9 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <Providers>
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </Providers>
       </body>
     </html>
