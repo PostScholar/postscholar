@@ -32,7 +32,8 @@ describeNetwork('POST /papers/lookup (requires network)', () => {
       .set('Cookie', cookie)
       .send({ doi: '10.1038/nature14539' })
 
-    expect(res.status).toBe(200)
+    // 201 when newly stored from CrossRef; 200 when paper already in DB
+    expect([200, 201]).toContain(res.status)
     expect(res.body.found).toBe(true)
     expect(res.body.paper.title).toBeDefined()
   }, 15000)
