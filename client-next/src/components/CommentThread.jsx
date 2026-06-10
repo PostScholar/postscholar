@@ -118,11 +118,14 @@ export default function CommentThread({
         <form className={styles.newCommentForm} onSubmit={handleCommentSubmit}>
           <textarea
             className={styles.textarea}
-            placeholder="Add a comment..."
+            placeholder="Add a comment… Use @username to mention someone"
             value={newComment}
             onChange={e => setNewComment(e.target.value)}
             rows={4}
           />
+          <p className={styles.hint}>
+            Use @username to mention someone · $...$ for inline math, $$...$$ for block math
+          </p>
           {error && <p className={styles.error}>{error}</p>}
           <div className={styles.formFooter}>
             <span className={styles.commentingAs}>

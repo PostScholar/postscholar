@@ -79,7 +79,7 @@ async function sendResetEmail(email, resetUrl) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      from: 'PostScholar <onboarding@resend.dev>',
+      from: process.env.EMAIL_FROM || 'PostScholar <onboarding@resend.dev>',
       to: email,
       subject: 'Reset your PostScholar password',
       html: `
@@ -128,7 +128,7 @@ router.post('/register', async (req, res) => {
   const password_hash = await bcrypt.hash(password, BCRYPT_COST)
 
   const result = await db.query(
-    'INSERT INTO users (email, username, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
+    'INSERT INTO users (email, username, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email, role',
     [email, username, password_hash]
   )
   const user = result.rows[0]
@@ -140,6 +140,7 @@ router.post('/register', async (req, res) => {
     id: user.id,
     username: user.username,
     email: user.email,
+    role: user.role || 'user',
   })
 })
 
@@ -162,7 +163,7 @@ router.post('/login', async (req, res) => {
   }
 
   const result = await db.query(
-    'SELECT id, username, password_hash FROM users WHERE email = $1',
+    'SELECT id, username, email, password_hash, role FROM users WHERE email = $1',
     [email]
   )
   const user = result.rows[0]
@@ -181,7 +182,8 @@ router.post('/login', async (req, res) => {
   res.status(200).json({
     id: user.id,
     username: user.username,
-    email,
+    email: user.email,
+    role: user.role || 'user',
   })
 })
 
@@ -195,7 +197,7 @@ const authenticateToken = require('../middleware/authenticateToken')
 // ---------------------------------------------------------------------------
 router.get('/me', authenticateToken, async (req, res) => {
   const result = await db.query(
-    'SELECT id, username, email, created_at FROM users WHERE id = $1',
+    'SELECT id, username, email, role, created_at FROM users WHERE id = $1',
     [req.user.userId]
   )
   if (!result.rows[0]) return res.status(404).json({ error: 'User not found' })

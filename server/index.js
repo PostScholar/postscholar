@@ -1,104 +1,78 @@
-// Load environment variables from /server/.env before anything else
-require('dotenv').config({ path: require('path').join(__dirname, '.env') })
+const config = require('./config')
 
 const express = require('express')
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
+const helmet = require('helmet')
 const rateLimit = require('express-rate-limit')
 const exploreRouter = require('./routes/explore')
+const errorHandler = require('./middleware/errorHandler')
 const app = express()
 
-// ---------------------------------------------------------------------------
-// CORS
-// ---------------------------------------------------------------------------
-// credentials: true is required for the browser to send httpOnly cookies
-// cross-origin (frontend on Vercel, backend on Railway).
-// All allowed origins are listed explicitly — wildcard (*) cannot be used
-// with credentials: true.
-// ---------------------------------------------------------------------------
+const corsOrigins = [
+  config.clientUrl,
+  'https://www.postscholar.org',
+  'https://postscholar.vercel.app',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+].filter(Boolean)
+
+app.use(helmet())
 app.use(cors({
-  origin: [
-    process.env.CLIENT_URL,               // https://postscholar.org (from env)
-    'https://www.postscholar.org',
-    'https://postscholar.vercel.app',     // Vercel preview deployments
-    'http://localhost:3001',              // Next.js development server
-    'http://127.0.0.1:3001'
-  ],
-  credentials: true
+  origin: corsOrigins,
+  credentials: true,
 }))
 
-// Parse incoming JSON request bodies
 app.use(express.json())
-
-// Parse cookies — required to read the httpOnly JWT token cookie
 app.use(cookieParser())
 
-// ---------------------------------------------------------------------------
-// Rate Limiting
-// ---------------------------------------------------------------------------
-// Protect against abuse and DoS attacks by limiting request rates.
-// Auth routes: 10 attempts per 15 minutes (login/register/password reset)
-// General routes: 100 requests per 15 minutes
-// ---------------------------------------------------------------------------
-
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // 50 attempts per window (increased for development)
-  skipSuccessfulRequests: true, // Don't count successful auth attempts
+  windowMs: config.rateLimits.auth.windowMs,
+  max: config.rateLimits.auth.max,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many attempts, please try again later.' }
+  message: { error: 'Too many attempts, please try again later.' },
 })
 
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // 500 requests per window (increased for development)
+  windowMs: config.rateLimits.general.windowMs,
+  max: config.rateLimits.general.max,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many requests, please try again later.' }
+  message: { error: 'Too many requests, please try again later.' },
 })
 
 const db = require('./db')
 
-// ---------------------------------------------------------------------------
-// Health check
-// ---------------------------------------------------------------------------
-// Used by Railway and uptime monitors to confirm the server and DB are up.
-// Returns { status: 'ok' } if the DB connection is healthy.
-// ---------------------------------------------------------------------------
 app.get('/health', async (req, res) => {
   await db.query('SELECT 1')
   res.json({ status: 'ok' })
 })
 
-// ---------------------------------------------------------------------------
-// Routes
-// ---------------------------------------------------------------------------
-// Apply auth rate limiter to sensitive auth endpoints
 app.use('/auth/login', authLimiter)
 app.use('/auth/register', authLimiter)
 app.use('/auth/forgot-password', authLimiter)
 app.use('/auth/reset-password', authLimiter)
-
-// Apply general rate limiter to all routes
 app.use('/', generalLimiter)
 
-// Register all route handlers
-app.use('/papers', require('./routes/papers'))           // DOI lookup, paper fetch
-app.use('/auth', require('./routes/auth'))               // register, login, /me
-app.use('/discussions', require('./routes/discussions')) // comments, search, delete
-app.use('/auth/orcid', require('./routes/orcid'))         // ORCID OAuth integration // ORCID OAuth, author badge
-app.use('/users', require('./routes/users'))             // user profiles
-app.use('/search', require('./routes/search'))           // global search
-app.use('/bookmarks', require('./routes/bookmarks'))     // bookmark discussions
-app.use('/reports', require('./routes/reports'))         // moderation reports
-app.use('/follows', require('./routes/follows'))         // following system
-app.use('/mentions', require('./routes/mentions'))       // @mentions
-app.use('/topic-follows', require('./routes/topic-follows')) // topic following
-app.use('/', exploreRouter) // explore feed and topics
+app.use('/papers', require('./routes/papers'))
+app.use('/auth', require('./routes/auth'))
+app.use('/discussions', require('./routes/discussions'))
+app.use('/auth/orcid', require('./routes/orcid'))
+app.use('/users', require('./routes/users'))
+app.use('/search', require('./routes/search'))
+app.use('/bookmarks', require('./routes/bookmarks'))
+app.use('/reports', require('./routes/reports'))
+app.use('/follows', require('./routes/follows'))
+app.use('/mentions', require('./routes/mentions'))
+app.use('/topic-follows', require('./routes/topic-follows'))
+app.use('/', exploreRouter)
 
-const PORT = process.env.PORT || 3000
-app.listen(PORT, () => console.log(`server running on port ${PORT}`))
+app.use(errorHandler)
+
+if (require.main === module) {
+  app.listen(config.port, () => console.log(`server running on port ${config.port}`))
+}
 
 module.exports = app
-

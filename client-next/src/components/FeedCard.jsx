@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Bookmark } from 'lucide-react'
+import ShareButton from './ShareButton'
 import styles from './FeedCard.module.css'
 import { createBookmark, removeBookmark, checkBookmark, normalizeDiscussion } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -139,15 +140,22 @@ export default function FeedCard({ discussion: rawDiscussion }) {
         </div>
       </div>
 
-      <button
-        onClick={toggleBookmark}
-        className={`${styles.bookmarkBtn} ${bookmarked ? styles.bookmarked : ''}`}
-        disabled={bookmarkLoading}
-        aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark discussion'}
-        title={user ? (bookmarked ? 'Remove bookmark' : 'Save discussion') : 'Sign in to bookmark'}
-      >
-        <Bookmark size={18} fill={bookmarked ? 'currentColor' : 'none'} />
-      </button>
+      <div className={styles.cardActions}>
+        <ShareButton
+          url={typeof window !== 'undefined' ? `${window.location.origin}/d/${id}` : `/d/${id}`}
+          title={title}
+          size={18}
+        />
+        <button
+          onClick={toggleBookmark}
+          className={`${styles.bookmarkBtn} ${bookmarked ? styles.bookmarked : ''}`}
+          disabled={bookmarkLoading}
+          aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark discussion'}
+          title={user ? (bookmarked ? 'Remove bookmark' : 'Save discussion') : 'Sign in to bookmark'}
+        >
+          <Bookmark size={18} fill={bookmarked ? 'currentColor' : 'none'} />
+        </button>
+      </div>
     </article>
   )
 }

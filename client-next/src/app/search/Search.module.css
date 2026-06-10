@@ -22,11 +22,96 @@
   padding: var(--space-4) 0;
 }
 
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
 .tabs {
   display: flex;
   gap: var(--space-2);
-  border-bottom: 1px solid var(--border);
-  margin-bottom: var(--space-6);
+}
+
+.filterToggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-bottom: var(--space-2);
+}
+
+.filterToggle:hover,
+.filterToggleActive {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  align-items: end;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.filterLabel {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.filterSelect,
+.filterInput {
+  font-size: var(--text-sm);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
+
+.filterActions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.applyBtn {
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.clearBtn {
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
 }
 
 .tab {

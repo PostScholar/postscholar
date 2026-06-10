@@ -2,10 +2,13 @@ const request = require('supertest')
 const app = require('../index')
 const pool = require('../db')
 
-const testEmail = `papertest_${Date.now()}@example.com`
-const testUsername = `papertest_${Date.now()}`
+const ts = Date.now().toString(36)
+const testEmail = `papertest_${ts}@example.com`
+const testUsername = `pt_${ts}`
 let cookie = ''
 let discussionId = ''
+
+const describeNetwork = process.env.CI ? describe : describe.skip
 
 beforeAll(async () => {
   const res = await request(app)
@@ -17,11 +20,12 @@ beforeAll(async () => {
 afterAll(async () => {
   try {
     await pool.query('DELETE FROM users WHERE email = $1', [testEmail])
-  } catch (err) {
+  } catch (_err) {
+    // cleanup best-effort
   }
 })
 
-describe('POST /papers/lookup', () => {
+describeNetwork('POST /papers/lookup (requires network)', () => {
   it('looks up a real DOI from CrossRef', async () => {
     const res = await request(app)
       .post('/papers/lookup')
@@ -45,13 +49,14 @@ describe('POST /papers/lookup', () => {
 })
 
 describe('POST /discussions', () => {
-  it('creates a discussion for a looked-up paper', async () => {
-    const lookupRes = await request(app)
-      .post('/papers/lookup')
+  it('creates a discussion for a manual paper', async () => {
+    const paperRes = await request(app)
+      .post('/papers/manual')
       .set('Cookie', cookie)
-      .send({ doi: '10.1038/nature14539' })
+      .send({ title: `Paper test ${ts}`, authors: 'Jane Doe', year: 2024 })
 
-    const paperId = lookupRes.body.paper.id
+    expect(paperRes.status).toBe(201)
+    const paperId = paperRes.body.paper.id
 
     const res = await request(app)
       .post('/discussions')
@@ -66,7 +71,7 @@ describe('POST /discussions', () => {
     }
 
     expect(discussionId).toBeDefined()
-  }, 15000)
+  })
 })
 
 describe('POST /discussions/:id/comments', () => {
@@ -76,9 +81,9 @@ describe('POST /discussions/:id/comments', () => {
     const res = await request(app)
       .post(`/discussions/${discussionId}/comments`)
       .set('Cookie', cookie)
-      .send({ body: 'This is a test comment from automated tests.' })
+      .send({ body: 'Automated integration test comment.' })
 
     expect(res.status).toBe(201)
-    expect(res.body.comment.body).toBe('This is a test comment from automated tests.')
+    expect(res.body.comment.body).toBe('Automated integration test comment.')
   })
 })
