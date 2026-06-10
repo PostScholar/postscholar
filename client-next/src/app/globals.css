@@ -19,31 +19,31 @@
    ------------------------------------------------------------ */
 :root,
 [data-theme="light"] {
-  --bg-base:        #F7F7F5;
-  --bg-surface:     #FFFFFF;
-  --bg-raised:      #F3F3F0;
-  --border:         #ECEAE6;
-  --border-strong:  #D8D6D0;
+  --bg-base:        #F9F6F2;
+  --bg-surface:     #FFFCF8;
+  --bg-raised:      #F5F0EA;
+  --border:         #E8E2DA;
+  --border-strong:  #D4CCC2;
 
-  --text-primary:   #1C1C1A;
-  --text-secondary: #5C5C58;
-  --text-muted:     #94948E;
+  --text-primary:   #2A2420;
+  --text-secondary: #5E534C;
+  --text-muted:     #8E847C;
 
-  --accent:         #5C6B73;
-  --accent-hover:   #4A5560;
-  --accent-subtle:  rgba(92, 107, 115, 0.08);
-  --accent-ring:    rgba(92, 107, 115, 0.18);
+  --accent:         #5A6B6E;
+  --accent-hover:   #465558;
+  --accent-subtle:  rgba(90, 107, 110, 0.09);
+  --accent-ring:    rgba(90, 107, 110, 0.18);
 
-  --badge-bg:       rgba(92, 107, 115, 0.07);
-  --badge-text:     #5C6B73;
-  --badge-border:   rgba(92, 107, 115, 0.16);
+  --badge-bg:       rgba(166, 95, 95, 0.08);
+  --badge-text:     #7A4E4E;
+  --badge-border:   rgba(166, 95, 95, 0.18);
 
-  /* Subtle brand red — used sparingly for emphasis */
-  --brand:          #8E5A5A;
-  --brand-hover:    #7A4A4A;
-  --brand-subtle:   rgba(142, 90, 90, 0.07);
-  --brand-border:   rgba(142, 90, 90, 0.18);
-  --brand-ring:     rgba(142, 90, 90, 0.14);
+  /* Warm burgundy brand accent */
+  --brand:          #A65F5F;
+  --brand-hover:    #8F4E4E;
+  --brand-subtle:   rgba(166, 95, 95, 0.10);
+  --brand-border:   rgba(166, 95, 95, 0.28);
+  --brand-ring:     rgba(166, 95, 95, 0.16);
 
   /* Semantic colors */
   --success:        #2d7a5e;
@@ -74,30 +74,30 @@
    Dim theme — dark grey base, easier on eyes than pure dark
    ------------------------------------------------------------ */
 [data-theme="dim"] {
-  --bg-base:        #141414;
-  --bg-surface:     #1C1C1C;
-  --bg-raised:      #242424;
-  --border:         #2E2E2E;
-  --border-strong:  #3C3C3C;
+  --bg-base:        #161412;
+  --bg-surface:     #1E1B18;
+  --bg-raised:      #26221E;
+  --border:         #332E2A;
+  --border-strong:  #443D38;
 
-  --text-primary:   #E8E6E2;
-  --text-secondary: #A8A6A0;
-  --text-muted:     #737370;
+  --text-primary:   #EDE8E2;
+  --text-secondary: #B0A69C;
+  --text-muted:     #7E756C;
 
-  --accent:         #8B9AAA;
-  --accent-hover:   #A4B0BC;
-  --accent-subtle:  rgba(139, 154, 170, 0.10);
-  --accent-ring:    rgba(139, 154, 170, 0.22);
+  --accent:         #8FA3A8;
+  --accent-hover:   #A8BAC0;
+  --accent-subtle:  rgba(143, 163, 168, 0.12);
+  --accent-ring:    rgba(143, 163, 168, 0.22);
 
-  --badge-bg:       rgba(139, 154, 170, 0.10);
-  --badge-text:     #A4B0BC;
-  --badge-border:   rgba(139, 154, 170, 0.20);
+  --badge-bg:       rgba(212, 150, 140, 0.12);
+  --badge-text:     #D4A8A0;
+  --badge-border:   rgba(212, 150, 140, 0.22);
 
-  --brand:          #C49A9A;
-  --brand-hover:    #D4AAAA;
-  --brand-subtle:   rgba(196, 154, 154, 0.10);
-  --brand-border:   rgba(196, 154, 154, 0.22);
-  --brand-ring:     rgba(196, 154, 154, 0.16);
+  --brand:          #D4908A;
+  --brand-hover:    #E4A8A2;
+  --brand-subtle:   rgba(212, 144, 138, 0.12);
+  --brand-border:   rgba(212, 144, 138, 0.28);
+  --brand-ring:     rgba(212, 144, 138, 0.18);
 
   /* Semantic colors */
   --success:        #34d399;
@@ -128,30 +128,30 @@
    Dark theme — near black
    ------------------------------------------------------------ */
 [data-theme="dark"] {
-  --bg-base:        #0F0F0F;
-  --bg-surface:     #181818;
-  --bg-raised:      #222222;
-  --border:         #2C2C2C;
-  --border-strong:  #383838;
+  --bg-base:        #12100E;
+  --bg-surface:     #1A1714;
+  --bg-raised:      #242019;
+  --border:         #302B26;
+  --border-strong:  #3E3832;
 
-  --text-primary:   #ECEAE6;
-  --text-secondary: #A6A4A0;
-  --text-muted:     #6E6E6A;
+  --text-primary:   #EDE8E2;
+  --text-secondary: #A89E94;
+  --text-muted:     #6E6660;
 
-  --accent:         #8B9AAA;
-  --accent-hover:   #A4B0BC;
-  --accent-subtle:  rgba(139, 154, 170, 0.10);
-  --accent-ring:    rgba(139, 154, 170, 0.22);
+  --accent:         #8FA3A8;
+  --accent-hover:   #A8BAC0;
+  --accent-subtle:  rgba(143, 163, 168, 0.12);
+  --accent-ring:    rgba(143, 163, 168, 0.22);
 
-  --badge-bg:       rgba(139, 154, 170, 0.10);
-  --badge-text:     #A4B0BC;
-  --badge-border:   rgba(139, 154, 170, 0.20);
+  --badge-bg:       rgba(212, 150, 140, 0.12);
+  --badge-text:     #D4A8A0;
+  --badge-border:   rgba(212, 150, 140, 0.22);
 
-  --brand:          #C49A9A;
-  --brand-hover:    #D4AAAA;
-  --brand-subtle:   rgba(196, 154, 154, 0.10);
-  --brand-border:   rgba(196, 154, 154, 0.22);
-  --brand-ring:     rgba(196, 154, 154, 0.16);
+  --brand:          #D4908A;
+  --brand-hover:    #E4A8A2;
+  --brand-subtle:   rgba(212, 144, 138, 0.12);
+  --brand-border:   rgba(212, 144, 138, 0.28);
+  --brand-ring:     rgba(212, 144, 138, 0.18);
 
   /* Semantic colors */
   --success:        #34d399;

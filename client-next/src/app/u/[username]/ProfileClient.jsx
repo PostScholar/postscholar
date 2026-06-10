@@ -41,13 +41,17 @@ export default function ProfileClient({ profile }) {
       try {
         const countsData = await getFollowCounts(profile.username)
         setCounts(countsData)
+      } catch (err) {
+        console.error('Failed to fetch follow counts:', err)
+      }
 
-        if (user && !isOwnProfile) {
+      if (user && !isOwnProfile) {
+        try {
           const statusData = await getFollowStatus(profile.username)
           setFollowing(statusData.following)
+        } catch {
+          // Optional — only available when session cookie is present
         }
-      } catch (err) {
-        console.error('Failed to fetch follow data:', err)
       }
     }
     fetchData()

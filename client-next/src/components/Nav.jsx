@@ -1,36 +1,44 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
-import { Search, Moon, Sun, Menu, X, Bell, Bookmark } from 'lucide-react'
+import { Search, Moon, Sun, Menu, X, Bell, User, Settings, LogOut } from 'lucide-react'
 import { getUnreadMentionCount } from '@/lib/api'
 import styles from './Nav.module.css'
 
-/**
- * Nav — top navigation bar
- *
- * Left: PostScholar wordmark
- * Right: Start a discussion link, sign in / username
- *
- * Sentence case throughout, no emojis, no icons except the wordmark.
- */
+function getInitials(username) {
+  return username ? username.slice(0, 2).toUpperCase() : '?'
+}
+
 export default function Nav() {
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const isBookmarksView = pathname === '/explore' && searchParams.get('filter') === 'bookmarks'
   const [searchQuery, setSearchQuery] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const profileRef = useRef(null)
 
   useEffect(() => {
     setMenuOpen(false)
+    setProfileOpen(false)
   }, [pathname])
+
+  useEffect(() => {
+    if (!profileOpen) return
+    function handleClickOutside(e) {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [profileOpen])
 
   useEffect(() => {
     if (user) {
@@ -57,19 +65,65 @@ export default function Nav() {
   }
 
   async function handleLogout() {
+    setProfileOpen(false)
     await logout()
     router.push('/login')
   }
 
+  const profileMenu = user && (
+    <div className={styles.profileWrap} ref={profileRef}>
+      <button
+        type="button"
+        className={`${styles.profileTrigger} ${profileOpen ? styles.profileTriggerOpen : ''}`}
+        onClick={() => setProfileOpen(!profileOpen)}
+        aria-label="Account menu"
+        aria-expanded={profileOpen}
+      >
+        <span className={styles.profileAvatar}>{getInitials(user.username)}</span>
+      </button>
+      {profileOpen && (
+        <div className={styles.profileMenu}>
+          <div className={styles.profileHeader}>
+            <span className={styles.profileAvatarLarge}>{getInitials(user.username)}</span>
+            <div className={styles.profileMeta}>
+              <span className={styles.profileName}>{user.username}</span>
+              <span className={styles.profileHint}>Signed in</span>
+            </div>
+          </div>
+          <div className={styles.profileDivider} />
+          <Link
+            href={`/u/${user.username}`}
+            className={styles.profileItem}
+            onClick={() => setProfileOpen(false)}
+          >
+            <User size={16} />
+            Your profile
+          </Link>
+          <Link
+            href="/settings"
+            className={styles.profileItem}
+            onClick={() => setProfileOpen(false)}
+          >
+            <Settings size={16} />
+            Settings
+          </Link>
+          <div className={styles.profileDivider} />
+          <button type="button" className={styles.profileItem} onClick={handleLogout}>
+            <LogOut size={16} />
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <nav className={styles.nav}>
       <div className={styles.inner}>
-        {/* Wordmark */}
         <Link href="/" className={styles.wordmark}>
           Post<span className={styles.wordmarkAccent}>Scholar</span>
         </Link>
 
-        {/* Search */}
         <form onSubmit={handleSearch} className={styles.search}>
           <input
             type="text"
@@ -83,16 +137,6 @@ export default function Nav() {
           </button>
         </form>
 
-        {/* Hamburger menu (mobile only) */}
-        <button
-          className={styles.hamburger}
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu"
-        >
-          {menuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-
-        {/* Right side */}
         <div className={`${styles.right} ${menuOpen ? styles.open : ''}`}>
           <Link
             href="/"
@@ -108,21 +152,11 @@ export default function Nav() {
           >
             Discussions
           </Link>
-          {user && (
-            <Link
-              href="/explore?filter=bookmarks"
-              className={`${styles.navLink} ${isBookmarksView ? styles.active : ''}`}
-              onClick={() => setMenuOpen(false)}
-            >
-              <Bookmark size={16} />
-              Bookmarks
-            </Link>
-          )}
           <button onClick={toggleTheme} className={styles.themeToggle} aria-label="Toggle theme" title={`Theme: ${theme}`}>
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
           {user && (
-            <Link href="/mentions" className={styles.mentionsBtn} aria-label="Mentions">
+            <Link href="/mentions" className={styles.mentionsBtn} aria-label="Mentions" onClick={() => setMenuOpen(false)}>
               <Bell size={18} />
               {unreadCount > 0 && (
                 <span className={styles.badge}>{unreadCount > 9 ? '9+' : unreadCount}</span>
@@ -130,25 +164,9 @@ export default function Nav() {
             </Link>
           )}
           {user ? (
-            <>
-              <Link
-                href="/start"
-                className={styles.startBtn}
-              >
-                Start a discussion
-              </Link>
-              <div className={styles.userMenu}>
-                <Link href={`/u/${user.username}`} className={styles.username}>
-                  {user.username}
-                </Link>
-                <Link href="/settings" className={styles.username}>
-                  Settings
-                </Link>
-                <button className={styles.logoutBtn} onClick={handleLogout}>
-                  Sign out
-                </button>
-              </div>
-            </>
+            <Link href="/start" className={styles.startBtn} onClick={() => setMenuOpen(false)}>
+              Start a discussion
+            </Link>
           ) : (
             <>
               <Link
@@ -157,15 +175,22 @@ export default function Nav() {
               >
                 Sign in
               </Link>
-              <Link
-                href="/register"
-                className={styles.registerBtn}
-              >
+              <Link href="/register" className={styles.registerBtn}>
                 Register
               </Link>
             </>
           )}
         </div>
+
+        {user && <div className={styles.profileBar}>{profileMenu}</div>}
+
+        <button
+          className={styles.hamburger}
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Toggle menu"
+        >
+          {menuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
       </div>
     </nav>
   )

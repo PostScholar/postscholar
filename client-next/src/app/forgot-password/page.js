@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { getApiUrl } from '@/lib/config'
 import styles from './Auth.module.css'
 
 /**
@@ -20,7 +21,7 @@ export default function ForgotPassword() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/forgot-password`, {
+      const res = await fetch(`${getApiUrl()}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })

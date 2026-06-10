@@ -117,21 +117,33 @@
 
 .error {
   font-size: var(--text-sm);
-  color: var(--accent);
-  margin-bottom: var(--space-4);
+  color: var(--error);
+  margin: var(--space-4) 0 0;
+}
+
+.sectionActions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
 }
 
 .saveBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--accent);
   color: #fff;
   border: none;
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-6);
-  font-size: var(--text-base);
-  font-weight: 600;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 500;
   cursor: pointer;
   transition: background 0.15s;
-  margin-top: var(--space-4);
+  min-height: 0;
+  line-height: 1.4;
 }
 
 .saveBtn:hover:not(:disabled) {

@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import Layout from '@/components/Layout'
+import { getApiUrl } from '@/lib/config'
 import styles from './Verify.module.css'
 
 /**
@@ -52,7 +53,7 @@ function VerifyInner() {
     try {
       // In E9: GET /auth/orcid/url?discussion_id=xxx
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/orcid/url?discussion_id=${discussionId}`,
+        `${getApiUrl()}/auth/orcid/url?discussion_id=${discussionId}`,
         { credentials: 'include' }
       )
       const data = await res.json()

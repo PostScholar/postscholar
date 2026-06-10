@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { getApiUrl } from '@/lib/config'
 import styles from './OrcidCallback.module.css'
 
 /**
@@ -31,7 +32,7 @@ function OrcidCallbackInner() {
 
     async function exchange() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/orcid/callback`, {
+        const res = await fetch(`${getApiUrl()}/auth/orcid/callback`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

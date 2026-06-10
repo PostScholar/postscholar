@@ -55,7 +55,7 @@
 @media (max-width: 768px) {
   .main,
   .wide {
-    padding: var(--space-4) var(--space-3);
+    padding: var(--space-4) var(--space-4);
   }
 
   .withSidebar {

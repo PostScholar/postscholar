@@ -32,29 +32,27 @@ function signToken(payload) {
 }
 
 /**
- * setTokenCookie(res, token)
- * Sets the JWT as an httpOnly cookie.
- * - sameSite: 'none' in production (required for cross-origin requests
- *   between postscholar.org and Railway backend)
- * - sameSite: 'strict' in development (same origin, more secure)
- * - secure: true in production only (https required for sameSite: none)
+ * Cookie options for the JWT session.
+ * Production: cross-origin (Vercel → Railway) needs sameSite none + secure.
+ * Development: frontend proxies /api → backend, so lax cookies work same-origin.
  */
-function setTokenCookie(res, token) {
-  res.cookie('token', token, {
+function tokenCookieOptions(maxAge) {
+  const isProd = process.env.NODE_ENV === 'production'
+  return {
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
-  })
+    sameSite: isProd ? 'none' : 'lax',
+    secure: isProd,
+    path: '/',
+    maxAge,
+  }
+}
+
+function setTokenCookie(res, token) {
+  res.cookie('token', token, tokenCookieOptions(7 * 24 * 60 * 60 * 1000))
 }
 
 function clearTokenCookie(res) {
-  res.cookie('token', '', {
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 0
-  })
+  res.cookie('token', '', tokenCookieOptions(0))
 }
 
 /**
@@ -130,7 +128,7 @@ router.post('/register', async (req, res) => {
   const password_hash = await bcrypt.hash(password, BCRYPT_COST)
 
   const result = await db.query(
-    'INSERT INTO users (email, username, password_hash) VALUES ($1, $2, $3) RETURNING id, username',
+    'INSERT INTO users (email, username, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
     [email, username, password_hash]
   )
   const user = result.rows[0]
@@ -138,7 +136,11 @@ router.post('/register', async (req, res) => {
   const token = signToken({ userId: user.id, username: user.username })
   setTokenCookie(res, token)
 
-  res.status(201).json({ username: user.username })
+  res.status(201).json({
+    id: user.id,
+    username: user.username,
+    email: user.email,
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -176,7 +178,11 @@ router.post('/login', async (req, res) => {
   const token = signToken({ userId: user.id, username: user.username })
   setTokenCookie(res, token)
 
-  res.status(200).json({ username: user.username })
+  res.status(200).json({
+    id: user.id,
+    username: user.username,
+    email,
+  })
 })
 
 const authenticateToken = require('../middleware/authenticateToken')

@@ -157,7 +157,9 @@ export default function ExploreFeed({ initialDiscussions, initialTopics, initial
         </div>
 
         <div className={styles.controlsRow}>
-          <div className={styles.mobileTabs}>
+          <div className={styles.mobileBrowse}>
+            <p className={styles.mobileBrowseLabel}>Browse</p>
+            <div className={styles.mobileTabs}>
             {FILTERS.map(f => (
               <button
                 key={f}
@@ -167,6 +169,7 @@ export default function ExploreFeed({ initialDiscussions, initialTopics, initial
                 {f}
               </button>
             ))}
+            </div>
           </div>
           {activeFilter !== 'Following' && activeFilter !== 'Bookmarks' && (
             <div className={styles.dropdowns}>

@@ -168,17 +168,19 @@ export default function SettingsPage() {
               <span>{label}</span>
             </label>
           ))}
+
+          {error && <p className={styles.error}>{error}</p>}
+
+          <div className={styles.sectionActions}>
+            <button
+              className={styles.saveBtn}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? 'Saving…' : saved ? 'Saved' : 'Save changes'}
+            </button>
+          </div>
         </section>
-
-        {error && <p className={styles.error}>{error}</p>}
-
-        <button
-          className={styles.saveBtn}
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? 'Saving…' : saved ? 'Saved' : 'Save changes'}
-        </button>
 
         <section className={styles.section}>
           <h2 className={styles.sectionHeading}>Topics</h2>

@@ -172,40 +172,123 @@
   text-decoration: none;
 }
 
-/* User menu */
-.userMenu {
+/* Profile dropdown */
+.profileWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profileTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  min-height: 0;
+}
+
+.profileTrigger:hover,
+.profileTriggerOpen {
+  border-color: var(--brand-border);
+  box-shadow: 0 0 0 2px var(--brand-ring);
+}
+
+.profileAvatar,
+.profileAvatarLarge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--brand-subtle);
+  color: var(--brand);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.profileAvatar {
+  width: 32px;
+  height: 32px;
+  font-size: 11px;
+}
+
+.profileAvatarLarge {
+  width: 40px;
+  height: 40px;
+  font-size: var(--text-sm);
+}
+
+.profileMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 300;
+  min-width: 220px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-2) 0;
+}
+
+.profileHeader {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
 }
 
-.username {
+.profileMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.profileName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profileHint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.profileDivider {
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-1) 0;
+}
+
+.profileItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
   font-size: var(--text-sm);
   color: var(--text-secondary);
   text-decoration: none;
-  display: flex;
-  align-items: center;
-}
-
-.username:hover {
-  color: var(--text-primary);
-  text-decoration: underline;
-}
-
-.logoutBtn {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
   background: none;
   border: none;
-  padding: 0;
+  text-align: left;
   cursor: pointer;
-  transition: color 0.15s ease;
-  display: flex;
-  align-items: center;
+  transition: background 0.1s, color 0.1s;
+  min-height: 0;
 }
 
-.logoutBtn:hover {
+.profileItem:hover {
+  background: var(--bg-raised);
   color: var(--text-primary);
+  text-decoration: none;
 }
 
 .themeToggle {
@@ -268,7 +351,17 @@
   color: var(--text-primary);
   cursor: pointer;
   padding: var(--space-2);
-  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.profileBar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.hamburger {
+  display: none;
 }
 
 /* Responsive */
@@ -276,8 +369,7 @@
   .inner {
     flex-wrap: wrap;
     align-items: center;
-    padding-top: var(--space-2);
-    padding-bottom: var(--space-2);
+    padding: var(--space-2) var(--space-4);
     gap: var(--space-2);
   }
 
@@ -287,15 +379,21 @@
     min-width: 0;
   }
 
+  .profileBar {
+    display: flex;
+    order: 2;
+    align-items: center;
+  }
+
   .hamburger {
     display: flex;
     align-items: center;
-    order: 2;
+    order: 3;
     margin-left: 0;
   }
 
   .search {
-    order: 3;
+    order: 4;
     flex: 1 1 100%;
     max-width: 100%;
     margin: 0;
@@ -303,18 +401,18 @@
 
   .right {
     display: none;
-    order: 4;
+    order: 5;
     position: static;
     flex: 1 1 100%;
     width: 100%;
-    background: var(--bg-raised);
+    background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: var(--space-3);
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-2);
-    box-shadow: none;
+    box-shadow: var(--shadow-sm);
   }
 
   .right.open {
@@ -331,22 +429,13 @@
     padding: var(--space-2) var(--space-3);
   }
 
-  .userMenu {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-2);
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--border);
-  }
-
   .startBtn {
     text-align: center;
     justify-content: center;
   }
-}
 
-@media (max-width: 600px) {
-  .inner {
-    padding: var(--space-2) var(--space-4);
+  .profileMenu {
+    right: 0;
+    left: auto;
   }
 }

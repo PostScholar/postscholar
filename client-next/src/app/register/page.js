@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
+import { getApiUrl } from '@/lib/config'
 import styles from './Auth.module.css'
 
 /**
@@ -23,7 +24,7 @@ export default function Register() {
     const form = e.target
     try {
       // Register then immediately log in
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
+      const res = await fetch(`${getApiUrl()}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
