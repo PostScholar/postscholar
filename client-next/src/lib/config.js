@@ -1,18 +1,12 @@
 const DEFAULT_API_URL = 'http://localhost:3000'
 
-function isLocalApiUrl(url) {
-  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(url)
-}
-
 export function getApiUrl() {
-  const configured = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || DEFAULT_API_URL
-
-  // Local dev: proxy via Next.js (/api) so auth cookies stay same-origin
-  if (typeof window !== 'undefined' && isLocalApiUrl(configured)) {
+  // Browser: always same-origin proxy — required for mobile Safari cookies
+  if (typeof window !== 'undefined') {
     return '/api'
   }
 
-  return configured
+  return process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || DEFAULT_API_URL
 }
 
 export function getServerApiUrl() {

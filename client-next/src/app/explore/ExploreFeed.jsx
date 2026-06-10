@@ -129,7 +129,14 @@ export default function ExploreFeed({ initialDiscussions, initialTopics, initial
       }
       setNextCursor(data.next_cursor)
     } catch (err) {
-      setError(err.message || 'Failed to load discussions')
+      const msg = err.message || 'Failed to load discussions'
+      if (msg === 'Not authenticated' && (activeFilter === 'Following' || activeFilter === 'Bookmarks')) {
+        setError(activeFilter === 'Following'
+          ? 'Sign in to see discussions from people you follow'
+          : 'Sign in to see your saved discussions')
+      } else {
+        setError(msg)
+      }
     } finally {
       setLoading(false)
       setLoadingMore(false)

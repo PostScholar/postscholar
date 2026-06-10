@@ -33,14 +33,14 @@ function signToken(payload) {
 
 /**
  * Cookie options for the JWT session.
- * Production: cross-origin (Vercel → Railway) needs sameSite none + secure.
- * Development: frontend proxies /api → backend, so lax cookies work same-origin.
+ * Frontend proxies /api → backend (Vercel/Railway and local dev), so the
+ * browser always talks same-origin and lax cookies work — including mobile Safari.
  */
 function tokenCookieOptions(maxAge) {
   const isProd = process.env.NODE_ENV === 'production'
   return {
     httpOnly: true,
-    sameSite: isProd ? 'none' : 'lax',
+    sameSite: 'lax',
     secure: isProd,
     path: '/',
     maxAge,
