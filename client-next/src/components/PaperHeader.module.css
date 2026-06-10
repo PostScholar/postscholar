@@ -59,6 +59,10 @@
   color: var(--accent);
 }
 
+.shareBtn {
+  margin-top: 2px;
+}
+
 .citeMenu {
   position: absolute;
   top: 100%;

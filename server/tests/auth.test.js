@@ -11,7 +11,8 @@ let cookie = ''
 afterAll(async () => {
   try {
     await pool.query('DELETE FROM users WHERE email = $1', [testEmail])
-  } catch (err) {
+  } catch (_err) {
+    // cleanup best-effort
   }
 })
 

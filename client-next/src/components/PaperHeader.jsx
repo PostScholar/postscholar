@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Bookmark, Quote } from 'lucide-react'
+import ShareButton from './ShareButton'
 import styles from './PaperHeader.module.css'
 import { createBookmark, removeBookmark, checkBookmark } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -160,6 +161,12 @@ export default function PaperHeader({ paper, startedBy, discussionCreatedAt, cus
               </div>
             )}
           </div>
+          {discussionId && (
+            <ShareButton
+              title={paper.title}
+              className={styles.shareBtn}
+            />
+          )}
           {user && discussionId && (
             <button
               onClick={toggleBookmark}

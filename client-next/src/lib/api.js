@@ -157,8 +157,15 @@ export function updateProfile(data) {
 // Search
 // ---------------------------------------------------------------------------
 
-export function searchDiscussions(q, type = 'all') {
-  return api.get(`/search?q=${encodeURIComponent(q)}&type=${type}`)
+export function searchDiscussions(q, { type = 'all', topic, yearFrom, yearTo, sort } = {}) {
+  const params = new URLSearchParams()
+  if (q) params.set('q', q)
+  if (type) params.set('type', type)
+  if (topic) params.set('topic', topic)
+  if (yearFrom) params.set('year_from', String(yearFrom))
+  if (yearTo) params.set('year_to', String(yearTo))
+  if (sort) params.set('sort', sort)
+  return api.get(`/search?${params.toString()}`)
 }
 
 // ---------------------------------------------------------------------------

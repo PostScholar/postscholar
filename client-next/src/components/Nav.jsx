@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
-import { Search, Moon, Sun, Menu, X, Bell, User, Settings, LogOut } from 'lucide-react'
+import { Search, Moon, Sun, Menu, X, Bell, User, Settings, LogOut, Shield } from 'lucide-react'
 import { getUnreadMentionCount } from '@/lib/api'
 import styles from './Nav.module.css'
 
@@ -107,6 +107,16 @@ export default function Nav() {
             <Settings size={16} />
             Settings
           </Link>
+          {(user.role === 'moderator' || user.role === 'admin') && (
+            <Link
+              href="/moderation"
+              className={styles.profileItem}
+              onClick={() => setProfileOpen(false)}
+            >
+              <Shield size={16} />
+              Moderation
+            </Link>
+          )}
           <div className={styles.profileDivider} />
           <button type="button" className={styles.profileItem} onClick={handleLogout}>
             <LogOut size={16} />

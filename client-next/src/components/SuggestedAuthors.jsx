@@ -52,7 +52,7 @@ export default function SuggestedAuthors() {
 
   return (
     <aside className={styles.sidebar}>
-      <h3 className={styles.title}>Suggested authors</h3>
+      <h3 className={styles.title}>Active researchers</h3>
       <div className={styles.list}>
         {authors.slice(0, 5).map(author => (
           <div key={author.id} className={styles.authorCard}>

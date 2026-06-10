@@ -24,7 +24,7 @@ This guide covers setup, deployment, and common development tasks for PostSchola
 
 1. **Clone and install dependencies**:
 ```bash
-git clone https://github.com/ummaraali2/postscholar.git
+git clone https://github.com/PostScholar/postscholar.git
 cd postscholar
 npm install
 cd server && npm install
@@ -45,6 +45,13 @@ CREATE DATABASE postscholar;
 
 3. **Configure environment variables**:
 
+```bash
+cp server/.env.example server/.env
+# Edit server/.env with your values
+```
+
+See [`server/.env.example`](../server/.env.example) for the full list. Minimum for local dev:
+
 **server/.env**:
 ```env
 DATABASE_URL=postgresql://localhost:5432/postscholar
@@ -52,9 +59,10 @@ JWT_SECRET=your-dev-secret-key-change-in-production
 CLIENT_URL=http://localhost:3001
 ORCID_CLIENT_ID=your-orcid-client-id
 ORCID_CLIENT_SECRET=your-orcid-client-secret
-ORCID_REDIRECT_URI=http://localhost:3000/auth/orcid/callback
 PORT=3000
 ```
+
+ORCID redirect is derived from `CLIENT_URL` (`{CLIENT_URL}/orcid/callback`).
 
 **client-next/.env.local**:
 ```env
@@ -87,12 +95,18 @@ npm run migrate
 
 **Remote (Railway)**:
 ```bash
-# Option 1: Railway CLI
+# Recommended: from server/ directory
+cd server
+npm run migrate:railway
+
+# Alternative: Railway CLI from repo root
 railway run node server/db/migrate.js
 
-# Option 2: Connect to Railway DB directly
-DATABASE_URL="postgresql://..." node server/db/migrate.js
+# Alternative: direct connection string
+cd server && DATABASE_URL="postgresql://..." node db/migrate.js
 ```
+
+Migration state is tracked in the `migrations` table (not `schema_migrations`).
 
 ### Creating a New Migration
 
@@ -172,19 +186,23 @@ PostScholar uses Railway for backend hosting.
    - `CLIENT_URL` → Your Vercel URL (https://postscholar.org)
    - `ORCID_CLIENT_ID` → From ORCID developer console
    - `ORCID_CLIENT_SECRET` → From ORCID developer console
-   - `ORCID_REDIRECT_URI` → https://your-backend.railway.app/auth/orcid/callback
+   - `NODE_ENV` → `production` (enables stricter rate limits)
    - `PORT` → 3000 (Railway sets this automatically)
+   - `RESEND_API_KEY` / `EMAIL_FROM` → when email domain is configured (see email setup plan)
 
 4. **Run migrations on Railway**:
 ```bash
-# Using Railway CLI:
-railway run node server/db/migrate.js
-
-# Or set DATABASE_URL locally and run:
-DATABASE_URL="your-railway-db-url" node server/db/migrate.js
+cd server
+npm run migrate:railway
 ```
 
-5. **Deploy**:
+5. **Promote a moderator** (after `018_user_roles.sql`):
+```sql
+UPDATE users SET role = 'moderator' WHERE username = 'yourusername';
+```
+Run in Railway Postgres → Query. Then sign out and back in on postscholar.org. Open `/moderation`.
+
+6. **Deploy**:
    - Railway automatically deploys on push to main
    - Monitor logs in Railway dashboard
 
@@ -276,7 +294,7 @@ cd client-next
 npm run lint
 npm run build  # Includes type checking
 
-# Server (when added)
+# Server
 cd server
 npm run lint
 ```
@@ -344,12 +362,11 @@ psql $DATABASE_URL -c "SELECT 1"
 
 ```bash
 # Check which migrations have run
-psql $DATABASE_URL -c "SELECT * FROM schema_migrations ORDER BY id"
+psql $DATABASE_URL -c "SELECT * FROM migrations ORDER BY id"
 
-# Manual rollback (if needed)
+# Manual rollback (if needed) — migrations are forward-only; fix forward with a new SQL file
 psql $DATABASE_URL
-DROP TABLE problematic_table;
-DELETE FROM schema_migrations WHERE filename = '016_problematic.sql';
+DELETE FROM migrations WHERE filename = '016_problematic.sql';
 \q
 
 # Re-run migrations

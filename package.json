@@ -7,20 +7,27 @@
     "dev": "concurrently \"npm run dev --prefix client-next\" \"npm run dev --prefix server\"",
     "dev:client": "npm run dev --prefix client-next",
     "dev:server": "npm run dev --prefix server",
-    "migrate": "node server/db/migrate.js"
+    "migrate": "node server/db/migrate.js",
+    "test": "npm test --prefix server",
+    "lint": "npm run lint --prefix server && npm run lint --prefix client-next",
+    "format": "prettier --write \"server/**/*.js\" \"client-next/**/*.{js,jsx,css}\"",
+    "format:check": "prettier --check \"server/**/*.js\" \"client-next/**/*.{js,jsx,css}\"",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ummaraali2/postscholar.git"
+    "url": "git+https://github.com/PostScholar/postscholar.git"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ummaraali2/postscholar/issues"
+    "url": "https://github.com/PostScholar/postscholar/issues"
   },
-  "homepage": "https://github.com/ummaraali2/postscholar#readme",
+  "homepage": "https://github.com/PostScholar/postscholar#readme",
   "devDependencies": {
-    "concurrently": "^10.0.0"
+    "concurrently": "^10.0.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.6.2"
   }
 }

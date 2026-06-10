@@ -7,7 +7,7 @@ import { Flag } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import AuthorBadge from './AuthorBadge'
 import { postComment, editComment, deleteComment, submitReport } from '@/lib/api'
-import { hasLatex, renderLatex } from '@/lib/renderLatex'
+import CommentBody from './CommentBody'
 import styles from './Comment.module.css'
 import 'katex/dist/katex.min.css'
 
@@ -64,7 +64,12 @@ export default function Comment({
       router.push('/login')
       return
     }
-    setReplyOpen(o => !o)
+    setReplyOpen(open => {
+      if (!open) {
+        setReplyBody(prev => prev.trim() ? prev : `@${comment.username} `)
+      }
+      return !open
+    })
   }
 
   async function handleReplySubmit(e) {
@@ -117,7 +122,7 @@ export default function Comment({
     try {
       await submitReport({
         comment_id: comment.id,
-        discussion_id: null,
+        discussion_id: discussionId,
         reason: reportReason,
         description: reportDescription.trim() || null
       })
@@ -186,14 +191,7 @@ export default function Comment({
             </div>
           </form>
         ) : (
-          hasLatex(comment.body) ? (
-            <div
-              className={styles.text}
-              dangerouslySetInnerHTML={{ __html: renderLatex(comment.body) }}
-            />
-          ) : (
-            <p className={styles.text}>{comment.body}</p>
-          )
+          <CommentBody body={comment.body} />
         )}
 
         {/* Actions */}
@@ -238,7 +236,9 @@ export default function Comment({
               rows={3}
               autoFocus
             />
-            <p className={styles.latexHint}>Tip: Use $...$ for inline math, $$...$$ for block math</p>
+            <p className={styles.latexHint}>
+              Use @username to mention someone · $...$ for inline math, $$...$$ for block math
+            </p>
             {replyError && <p className={styles.formError}>{replyError}</p>}
             <div className={styles.replyActions}>
               <button

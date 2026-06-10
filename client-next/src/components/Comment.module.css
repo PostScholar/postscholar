@@ -288,6 +288,16 @@
   font-style: italic;
 }
 
+.mention {
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.mention:hover {
+  text-decoration: underline;
+}
+
 .text :global(.katex) {
   font-size: 1.05em;
 }

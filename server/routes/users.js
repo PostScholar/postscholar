@@ -8,10 +8,39 @@ router.get('/suggested', optionalAuth, async (req, res) => {
   try {
     const currentUserId = req.user?.userId
 
+    if (currentUserId) {
+      const topicBased = await pool.query(
+        `SELECT u.id, u.username, u.affiliation,
+                MAX(c.created_at) AS last_active
+         FROM users u
+         JOIN comments c ON c.user_id = u.id
+         JOIN discussions d ON d.id = c.discussion_id
+         JOIN discussion_topics dt ON dt.discussion_id = d.id
+         JOIN topics t ON t.id = dt.topic_id
+         WHERE t.slug IN (
+           SELECT topic FROM topic_follows WHERE user_id = $1
+         )
+         AND u.id != $1
+         AND u.id NOT IN (
+           SELECT following_id FROM follows WHERE follower_id = $1
+         )
+         GROUP BY u.id, u.username, u.affiliation
+         ORDER BY last_active DESC
+         LIMIT 10`,
+        [currentUserId]
+      )
+
+      if (topicBased.rows.length > 0) {
+        return res.json({
+          users: topicBased.rows.map(u => ({ ...u, is_following: false }))
+        })
+      }
+    }
+
     let query = `
       SELECT u.id, u.username, u.affiliation,
-             (SELECT COUNT(*) FROM discussions WHERE created_by = u.id) as discussion_count,
-             (SELECT COUNT(*) FROM follows WHERE following_id = u.id) as follower_count
+             (SELECT COUNT(*) FROM discussions WHERE created_by = u.id) AS discussion_count,
+             (SELECT MAX(c.created_at) FROM comments c WHERE c.user_id = u.id) AS last_active
       FROM users u
     `
 
@@ -27,18 +56,15 @@ router.get('/suggested', optionalAuth, async (req, res) => {
     }
 
     query += `
-      ORDER BY follower_count DESC, discussion_count DESC
+      ORDER BY last_active DESC NULLS LAST, discussion_count DESC
       LIMIT 10
     `
 
     const result = await pool.query(query, params)
 
-    const users = result.rows.map(u => ({
-      ...u,
-      is_following: false
-    }))
-
-    res.json({ users })
+    res.json({
+      users: result.rows.map(u => ({ ...u, is_following: false }))
+    })
   } catch (err) {
     console.error('GET /users/suggested error:', err)
     res.status(500).json({ error: 'Internal server error' })

@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const pool = require('../db')
 const authenticateToken = require('../middleware/authenticateToken')
+const requireModerator = require('../middleware/requireModerator')
 
 // ---------------------------------------------------------------------------
 // POST /reports
@@ -39,19 +40,25 @@ router.post('/', authenticateToken, async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /reports
 // ---------------------------------------------------------------------------
-// List reports (moderator only - TODO: add role check)
+// List reports (moderator only)
 // ---------------------------------------------------------------------------
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, requireModerator, async (req, res) => {
   try {
-    // TODO: Add role check for moderator/admin
     const { status = 'pending' } = req.query
 
     const result = await pool.query(
       `SELECT
-        r.*,
-        u.username as reporter_username,
-        c.body as comment_body,
-        cu.username as comment_author
+        r.id,
+        r.reporter_id,
+        r.comment_id,
+        r.reason,
+        r.description,
+        r.status,
+        r.created_at,
+        COALESCE(r.discussion_id, c.discussion_id) AS discussion_id,
+        u.username AS reporter_username,
+        c.body AS comment_body,
+        cu.username AS comment_author
        FROM reports r
        JOIN users u ON r.reporter_id = u.id
        LEFT JOIN comments c ON r.comment_id = c.id
@@ -72,11 +79,10 @@ router.get('/', authenticateToken, async (req, res) => {
 // ---------------------------------------------------------------------------
 // PATCH /reports/:id
 // ---------------------------------------------------------------------------
-// Update report status (moderator only - TODO: add role check)
+// Update report status (moderator only)
 // ---------------------------------------------------------------------------
-router.patch('/:id', authenticateToken, async (req, res) => {
+router.patch('/:id', authenticateToken, requireModerator, async (req, res) => {
   try {
-    // TODO: Add role check for moderator/admin
     const { status } = req.body
 
     if (!status || !['pending', 'reviewed', 'actioned', 'dismissed'].includes(status)) {

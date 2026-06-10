@@ -33,7 +33,7 @@ PostScholar is an academic discussion platform where researchers can discuss res
 
 ```bash
 # Clone the repository
-git clone https://github.com/ummaraali2/postscholar.git
+git clone https://github.com/PostScholar/postscholar.git
 cd postscholar
 
 # Install root dependencies
@@ -51,16 +51,19 @@ cd ..
 
 ### Configuration
 
-Create `.env` files:
+Copy the example env file and fill in values:
 
-**server/.env**:
+```bash
+cp server/.env.example server/.env
+```
+
+**server/.env** (see [`server/.env.example`](server/.env.example) for all variables):
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/postscholar
 JWT_SECRET=your-secret-key
 CLIENT_URL=http://localhost:3001
 ORCID_CLIENT_ID=your-orcid-client-id
 ORCID_CLIENT_SECRET=your-orcid-client-secret
-ORCID_REDIRECT_URI=http://localhost:3000/auth/orcid/callback
 PORT=3000
 ```
 
@@ -72,9 +75,31 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 ### Database Setup
 
 ```bash
-# Run migrations
+# Local
 npm run migrate
+
+# Production (Railway Postgres)
+cd server && npm run migrate:railway
 ```
+
+### Moderation (production)
+
+After migration `018_user_roles.sql`, promote your owner account:
+
+```sql
+UPDATE users SET role = 'moderator' WHERE username = 'yourusername';
+```
+
+Then sign out and back in. Open **Moderation** from the profile menu or `/moderation`.
+
+### Testing & CI
+
+```bash
+npm test          # server integration tests
+npm run lint      # server + client-next ESLint
+```
+
+GitHub Actions runs tests, lint, and `client-next` build on every PR.
 
 ### Running the Application
 
@@ -123,10 +148,10 @@ postscholar/
 
 ## License
 
-ISC
+MIT — see [LICENSE](LICENSE)
 
 ## Links
 
 - **Production**: https://postscholar.org
 - **API**: https://postscholar-production.up.railway.app
-- **Repository**: https://github.com/ummaraali2/postscholar
+- **Repository**: https://github.com/PostScholar/postscholar
