@@ -9,6 +9,9 @@ const exploreRouter = require('./routes/explore')
 const errorHandler = require('./middleware/errorHandler')
 const app = express()
 
+// Railway/Vercel sit behind a reverse proxy; required for express-rate-limit
+app.set('trust proxy', 1)
+
 const corsOrigins = [
   config.clientUrl,
   'https://www.postscholar.org',
