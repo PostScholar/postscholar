@@ -13,7 +13,7 @@ async function startOAuth(path) {
   window.location.href = data.url
 }
 
-export default function SocialAuthButtons() {
+export function SocialAuthButtons() {
   const [loading, setLoading] = useState(null)
   const [error, setError] = useState(null)
 
