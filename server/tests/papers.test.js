@@ -1,6 +1,7 @@
 const request = require('supertest')
 const app = require('../index')
 const pool = require('../db')
+const { verifyTestUserByEmail } = require('./helpers')
 
 const ts = Date.now().toString(36)
 const testEmail = `papertest_${ts}@example.com`
@@ -15,6 +16,7 @@ beforeAll(async () => {
     .post('/auth/register')
     .send({ email: testEmail, username: testUsername, password: 'password123' })
   cookie = res.headers['set-cookie'][0]
+  await verifyTestUserByEmail(testEmail)
 })
 
 afterAll(async () => {

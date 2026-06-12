@@ -7,8 +7,9 @@ import { useAuth } from '@/context/AuthContext'
 import { followUser, unfollowUser, getFollowStatus, getFollowCounts } from '@/lib/api'
 import styles from './Profile.module.css'
 
-function getInitials(username) {
-  return username.slice(0, 2).toUpperCase()
+function getInitials(profile) {
+  const source = profile.display_name || profile.username || ''
+  return source.slice(0, 2).toUpperCase()
 }
 
 function timeAgo(dateStr) {
@@ -83,10 +84,17 @@ export default function ProfileClient({ profile }) {
       <Link href="/explore" className="backLink">← Discussions</Link>
 
       <div className={styles.header}>
-        <div className={styles.avatar}>{getInitials(profile.username)}</div>
+        <div className={styles.avatar}>{getInitials(profile)}</div>
         <div className={styles.info}>
           <div className={styles.nameRow}>
-            <h1 className={styles.username}>{profile.username}</h1>
+            <div>
+              <h1 className={styles.username}>
+                {profile.display_name || profile.username}
+              </h1>
+              {profile.display_name && (
+                <p className={styles.handle}>@{profile.username}</p>
+              )}
+            </div>
             {!isOwnProfile && user && (
               <button
                 className={`${styles.followBtn} ${following ? styles.following : ''}`}

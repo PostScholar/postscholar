@@ -155,6 +155,15 @@
   cursor: not-allowed;
 }
 
+.readOnly {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
 .topicsLink {
   font-size: var(--text-sm);
   font-weight: 500;

@@ -48,8 +48,11 @@ export default function FeedCard({ discussion: rawDiscussion }) {
     comment_count,
     latest_activity,
     topics = [],
-    username
+    username,
+    display_name,
   } = discussion
+
+  const starterLabel = display_name || username
 
   const { user } = useAuth()
   const [bookmarked, setBookmarked] = useState(false)
@@ -113,7 +116,7 @@ export default function FeedCard({ discussion: rawDiscussion }) {
             <span className={styles.metaItem}>
               <span className={styles.metaLabel}>Started by</span>
               <Link href={`/u/${username}`} className={styles.author}>
-                {username}
+                {starterLabel}
               </Link>
             </span>
           )}

@@ -1,6 +1,7 @@
 const request = require('supertest')
 const app = require('../index')
 const pool = require('../db')
+const { verifyTestUserByEmail } = require('./helpers')
 
 const ts = Date.now().toString(36)
 const userA = { email: `social_a_${ts}@example.com`, username: `sa_${ts}` }
@@ -22,6 +23,9 @@ beforeAll(async () => {
     .post('/auth/register')
     .send({ ...userB, password })
   cookieB = regB.headers['set-cookie'][0]
+
+  await verifyTestUserByEmail(userA.email)
+  await verifyTestUserByEmail(userB.email)
 
   await pool.query(
     "UPDATE users SET role = 'moderator' WHERE username = $1",

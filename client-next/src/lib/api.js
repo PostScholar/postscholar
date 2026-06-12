@@ -327,6 +327,7 @@ export function normalizeDiscussion(discussion) {
   return {
     ...discussion,
     username: discussion.username || discussion.started_by || null,
+    display_name: discussion.display_name || discussion.started_by_display_name || null,
     latest_activity:
       discussion.latest_activity ||
       discussion.bookmarked_at ||

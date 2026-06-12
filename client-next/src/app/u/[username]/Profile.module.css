@@ -50,6 +50,12 @@
   letter-spacing: -0.02em;
 }
 
+.handle {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: var(--space-1) 0 0;
+}
+
 .affiliation {
   font-size: var(--text-sm);
   color: var(--text-secondary);

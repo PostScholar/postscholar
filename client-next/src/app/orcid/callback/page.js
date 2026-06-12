@@ -3,21 +3,14 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { getApiUrl } from '@/lib/config'
+import { useAuth } from '@/context/AuthContext'
 import styles from './OrcidCallback.module.css'
 
-/**
- * OrcidCallback — /orcid/callback
- *
- * ORCID redirects here after OAuth with ?code=xxx&state=xxx
- * We send these to POST /auth/orcid/callback which verifies
- * the author and stores the verification record.
- *
- * After success or failure, we redirect back to the discussion.
- */
 function OrcidCallbackInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [status, setStatus] = useState('loading') // loading | success | error | no_match
+  const { refreshUser } = useAuth()
+  const [status, setStatus] = useState('loading')
   const [message, setMessage] = useState('')
 
   useEffect(() => {
@@ -36,13 +29,30 @@ function OrcidCallbackInner() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ code, state })
+          body: JSON.stringify({ code, state }),
         })
         const data = await res.json()
 
         if (!res.ok) {
           setStatus('error')
-          setMessage(data.error || 'Verification failed')
+          setMessage(data.error || 'ORCID sign-in failed')
+          return
+        }
+
+        if (data.needs_completion) {
+          const params = new URLSearchParams({
+            token: data.completion_token,
+          })
+          if (data.display_name) params.set('name', data.display_name)
+          router.replace(`/auth/complete?${params.toString()}`)
+          return
+        }
+
+        if (data.mode === 'login') {
+          await refreshUser()
+          setStatus('success')
+          setMessage('Signed in with ORCID.')
+          setTimeout(() => router.push('/'), 1500)
           return
         }
 
@@ -70,7 +80,7 @@ function OrcidCallbackInner() {
     }
 
     exchange()
-  }, [searchParams, router])
+  }, [searchParams, router, refreshUser])
 
   return (
     <div className={styles.page}>
@@ -78,21 +88,21 @@ function OrcidCallbackInner() {
         {status === 'loading' && (
           <>
             <div className={styles.spinner} />
-            <p className={styles.message}>Verifying your ORCID...</p>
+            <p className={styles.message}>Connecting your ORCID account…</p>
           </>
         )}
         {status === 'success' && (
           <>
             <div className={styles.icon}>✓</div>
             <p className={`${styles.message} ${styles.success}`}>{message}</p>
-            <p className={styles.hint}>Redirecting...</p>
+            <p className={styles.hint}>Redirecting…</p>
           </>
         )}
         {(status === 'error' || status === 'no_match') && (
           <>
             <div className={`${styles.icon} ${styles.failIcon}`}>✗</div>
             <p className={`${styles.message} ${styles.fail}`}>{message}</p>
-            <p className={styles.hint}>Redirecting...</p>
+            <p className={styles.hint}>Redirecting…</p>
           </>
         )}
       </div>
@@ -102,7 +112,7 @@ function OrcidCallbackInner() {
 
 export default function OrcidCallback() {
   return (
-    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>}>
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading…</div>}>
       <OrcidCallbackInner />
     </Suspense>
   )

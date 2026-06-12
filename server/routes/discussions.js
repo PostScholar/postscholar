@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const pool = require('../db')
 const authenticateToken = require('../middleware/authenticateToken')
+const requireVerifiedEmail = require('../middleware/requireVerifiedEmail')
 const optionalAuth = require('../middleware/optionalAuth')
 const sanitizeHtml = require('sanitize-html')
 
@@ -165,7 +166,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
     // Fetch one extra row to detect if a next page exists
     // Join users to get username for display
     const topLevelResult = await pool.query(
-      `SELECT c.*, u.username FROM comments c
+      `SELECT c.*, u.username, u.display_name FROM comments c
        JOIN users u ON u.id = c.user_id
        WHERE c.discussion_id = $1
          AND c.parent_comment_id IS NULL
@@ -187,11 +188,11 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
       // Fetch all descendants of this page's top-level comments recursively
       const descendantsResult = await pool.query(
         `WITH RECURSIVE descendants AS (
-           SELECT c.*, u.username FROM comments c
+           SELECT c.*, u.username, u.display_name FROM comments c
            JOIN users u ON u.id = c.user_id
            WHERE c.parent_comment_id = ANY($1::uuid[])
            UNION ALL
-           SELECT c.*, u.username FROM comments c
+           SELECT c.*, u.username, u.display_name FROM comments c
            JOIN users u ON u.id = c.user_id
            INNER JOIN descendants d ON c.parent_comment_id = d.id
          )
@@ -292,7 +293,7 @@ router.get('/:id/comments/search', optionalAuth, async (req, res) => {
 //
 // Depth is computed server-side as parent.depth + 1.
 // ---------------------------------------------------------------------------
-router.post('/:id/comments', authenticateToken, async (req, res) => {
+router.post('/:id/comments', authenticateToken, requireVerifiedEmail, async (req, res) => {
   try {
     const { id: discussion_id } = req.params
     const { body, parent_comment_id } = req.body
@@ -349,7 +350,8 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO comments (discussion_id, user_id, parent_comment_id, body, depth)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING *, (SELECT username FROM users WHERE id = $2) AS username`,
+       RETURNING *, (SELECT username FROM users WHERE id = $2) AS username,
+       (SELECT display_name FROM users WHERE id = $2) AS display_name`,
       [discussion_id, req.user.userId, parent_comment_id || null, sanitizedBody, depth]
     )
 
@@ -599,7 +601,8 @@ router.get('/:id/paper', optionalAuth, async (req, res) => {
               d.id AS discussion_id,
               d.created_at AS discussion_created_at,
               d.custom_tags,
-              u.username AS started_by
+              u.username AS started_by,
+              u.display_name AS started_by_display_name
        FROM papers p
        JOIN discussions d ON d.paper_id = p.id
        LEFT JOIN users u ON u.id = d.created_by
@@ -622,7 +625,8 @@ router.get('/:id/paper', optionalAuth, async (req, res) => {
       discussion_id: row.discussion_id,
       discussion_created_at: row.discussion_created_at,
       custom_tags: row.custom_tags,
-      started_by: row.started_by
+      started_by: row.started_by,
+      started_by_display_name: row.started_by_display_name,
     })
   } catch (err) {
     console.error('GET /discussions/:id/paper error:', err)
@@ -644,7 +648,7 @@ router.get('/:id/paper', optionalAuth, async (req, res) => {
 //   topics      (UUID[], optional) — topic IDs from the taxonomy
 //   custom_tags (string[], optional) — free-text tags
 // ---------------------------------------------------------------------------
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, requireVerifiedEmail, async (req, res) => {
   try {
     const { paper_id, topics = [], custom_tags = [] } = req.body
 
@@ -776,6 +780,7 @@ router.get('/following', authenticateToken, async (req, res) => {
       SELECT d.id, d.created_at, d.created_by, d.custom_tags,
              p.title, p.authors_json, p.journal, p.year, p.doi,
              u.username,
+             u.display_name,
              COUNT(c.id)::int AS comment_count,
              COALESCE(MAX(c.created_at), d.created_at) AS latest_activity,
              COALESCE(
@@ -806,7 +811,7 @@ router.get('/following', authenticateToken, async (req, res) => {
 
     query += `
       GROUP BY d.id, d.custom_tags, d.created_by, d.created_at,
-               p.title, p.authors_json, p.journal, p.year, p.doi, u.username
+               p.title, p.authors_json, p.journal, p.year, p.doi, u.username, u.display_name
       ORDER BY d.created_at DESC
       LIMIT $${paramCount}
     `
