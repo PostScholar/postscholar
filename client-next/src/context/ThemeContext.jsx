@@ -8,14 +8,17 @@ export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState('light')
 
   useEffect(() => {
-    const saved = localStorage.getItem('ps-theme') || 'light'
+    let saved = localStorage.getItem('ps-theme') || 'light'
+    if (saved === 'dark') {
+      saved = 'dim'
+      localStorage.setItem('ps-theme', 'dim')
+    }
     setTheme(saved)
     document.documentElement.setAttribute('data-theme', saved)
   }, [])
 
   function toggleTheme() {
-    const order = ['light', 'dim', 'dark']
-    const next = order[(order.indexOf(theme) + 1) % order.length]
+    const next = theme === 'light' ? 'dim' : 'light'
     setTheme(next)
     localStorage.setItem('ps-theme', next)
     document.documentElement.setAttribute('data-theme', next)

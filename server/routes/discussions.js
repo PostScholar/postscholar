@@ -461,30 +461,56 @@ router.post('/comments/:id/react', authenticateToken, async (req, res) => {
     const { id } = req.params
 
     const commentCheck = await pool.query(
-      'SELECT id FROM comments WHERE id = $1',
+      'SELECT id, user_id FROM comments WHERE id = $1',
       [id]
     )
     if (commentCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Comment not found' })
     }
 
+    const authorId = commentCheck.rows[0].user_id
+    const reactorId = req.user.userId
+
     const existing = await pool.query(
       'SELECT 1 FROM comment_reactions WHERE comment_id = $1 AND user_id = $2',
-      [id, req.user.userId]
+      [id, reactorId]
     )
 
     let reacted
     if (existing.rows.length > 0) {
       await pool.query(
         'DELETE FROM comment_reactions WHERE comment_id = $1 AND user_id = $2',
-        [id, req.user.userId]
+        [id, reactorId]
       )
+      if (authorId !== reactorId) {
+        await pool.query(
+          `DELETE FROM mentions
+           WHERE comment_id = $1 AND mentioning_user_id = $2
+             AND mentioned_user_id = $3 AND type = 'appreciation'`,
+          [id, reactorId, authorId]
+        )
+      }
       reacted = false
     } else {
       await pool.query(
         'INSERT INTO comment_reactions (comment_id, user_id) VALUES ($1, $2)',
-        [id, req.user.userId]
+        [id, reactorId]
       )
+      if (authorId !== reactorId) {
+        const notifExists = await pool.query(
+          `SELECT 1 FROM mentions
+           WHERE comment_id = $1 AND mentioning_user_id = $2
+             AND mentioned_user_id = $3 AND type = 'appreciation'`,
+          [id, reactorId, authorId]
+        )
+        if (notifExists.rows.length === 0) {
+          await pool.query(
+            `INSERT INTO mentions (comment_id, mentioned_user_id, mentioning_user_id, type)
+             VALUES ($1, $2, $3, 'appreciation')`,
+            [id, authorId, reactorId]
+          )
+        }
+      }
       reacted = true
     }
 

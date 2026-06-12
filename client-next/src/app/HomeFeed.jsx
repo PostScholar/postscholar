@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import FeedCard from '@/components/FeedCard'
+import FeedSkeleton from '@/components/FeedSkeleton'
 import TopicDropdown from '@/components/TopicDropdown'
 import SortDropdown from '@/components/SortDropdown'
 import { getExplore, normalizeDiscussion } from '@/lib/api'
@@ -117,7 +118,7 @@ export default function HomeFeed({ initialDiscussions, initialTopics, initialNex
       </div>
 
       {loading ? (
-        <p className={styles.state}>Loading...</p>
+        <FeedSkeleton rows={5} />
       ) : error ? (
         <p className={styles.errorState}>{error}</p>
       ) : discussions.length === 0 ? (

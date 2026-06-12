@@ -105,7 +105,9 @@ export default function MentionsPage() {
 
       {mentions.length === 0 ? (
         <p className={styles.empty}>
-          {filter === 'unread' ? 'No unread mentions' : 'No mentions yet'}
+          {filter === 'unread'
+            ? 'Nothing unread — mentions and appreciations appear here.'
+            : 'No mentions or appreciations yet'}
         </p>
       ) : (
         <div className={styles.list}>
@@ -118,7 +120,11 @@ export default function MentionsPage() {
                 <Link href={`/u/${mention.mentioning_username}`} className={styles.username}>
                   @{mention.mentioning_username}
                 </Link>
-                <span className={styles.action}>mentioned you in</span>
+                <span className={styles.action}>
+                  {mention.type === 'appreciation'
+                    ? 'appreciated your comment in'
+                    : 'mentioned you in'}
+                </span>
                 <Link href={`/d/${mention.discussion_id}`} className={styles.discussionLink}>
                   {mention.discussion_title}
                 </Link>

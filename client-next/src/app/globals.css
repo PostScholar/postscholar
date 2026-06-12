@@ -1,8 +1,17 @@
 /* ============================================================
    PostScholar — Global Styles
-   Theme system: three modes (light, dim, dark) via data-theme
-   on <html>. Accent color is a single CSS variable swapped
-   by the color picker during design phase.
+   Themes: light (default) and dim via data-theme on <html>.
+
+   DESIGN TOKENS — scholarly neutral
+   ---------------------------------
+   --text-*     Body copy hierarchy (primary → muted)
+   --accent     Ink/slate UI: inline links, focus rings, active tabs,
+                comment actions, secondary controls
+   --brand      Burgundy reserved for: wordmark accent, primary CTAs
+                (landing hero, nav “Start discussion”)
+   --border-*   Prefer whitespace over heavy rules; borders are subtle
+   --bg-*       Paper-like surfaces (base → raised)
+   Semantic: --success, --warning, --error, --info (alerts only)
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
@@ -19,31 +28,31 @@
    ------------------------------------------------------------ */
 :root,
 [data-theme="light"] {
-  --bg-base:        #F9F6F2;
-  --bg-surface:     #FFFCF8;
-  --bg-raised:      #F5F0EA;
-  --border:         #E8E2DA;
-  --border-strong:  #D4CCC2;
+  --bg-base:        #F8F7F4;
+  --bg-surface:     #FDFCFA;
+  --bg-raised:      #F3F2EE;
+  --border:         #EBEAE6;
+  --border-strong:  #D8D6D0;
 
-  --text-primary:   #2A2420;
-  --text-secondary: #5E534C;
-  --text-muted:     #8E847C;
+  --text-primary:   #1C1917;
+  --text-secondary: #4A4540;
+  --text-muted:     #7A746C;
 
-  --accent:         #5A6B6E;
-  --accent-hover:   #465558;
-  --accent-subtle:  rgba(90, 107, 110, 0.09);
-  --accent-ring:    rgba(90, 107, 110, 0.18);
+  --accent:         #4A4540;
+  --accent-hover:   #1C1917;
+  --accent-subtle:  rgba(74, 69, 64, 0.07);
+  --accent-ring:    rgba(74, 69, 64, 0.28);
 
-  --badge-bg:       rgba(166, 95, 95, 0.08);
-  --badge-text:     #7A4E4E;
-  --badge-border:   rgba(166, 95, 95, 0.18);
+  --badge-bg:       rgba(139, 79, 79, 0.06);
+  --badge-text:     #6B4444;
+  --badge-border:   rgba(139, 79, 79, 0.16);
 
-  /* Warm burgundy brand accent */
-  --brand:          #A65F5F;
-  --brand-hover:    #8F4E4E;
-  --brand-subtle:   rgba(166, 95, 95, 0.10);
-  --brand-border:   rgba(166, 95, 95, 0.28);
-  --brand-ring:     rgba(166, 95, 95, 0.16);
+  /* Burgundy — logo + primary CTA only */
+  --brand:          #8B4F4F;
+  --brand-hover:    #744342;
+  --brand-subtle:   rgba(139, 79, 79, 0.09);
+  --brand-border:   rgba(139, 79, 79, 0.24);
+  --brand-ring:     rgba(139, 79, 79, 0.18);
 
   /* Semantic colors */
   --success:        #2d7a5e;
@@ -77,27 +86,27 @@
   --bg-base:        #161412;
   --bg-surface:     #1E1B18;
   --bg-raised:      #26221E;
-  --border:         #332E2A;
-  --border-strong:  #443D38;
+  --border:         #2E2A26;
+  --border-strong:  #3D3832;
 
   --text-primary:   #EDE8E2;
   --text-secondary: #B0A69C;
   --text-muted:     #7E756C;
 
-  --accent:         #8FA3A8;
-  --accent-hover:   #A8BAC0;
-  --accent-subtle:  rgba(143, 163, 168, 0.12);
-  --accent-ring:    rgba(143, 163, 168, 0.22);
+  --accent:         #B0A69C;
+  --accent-hover:   #EDE8E2;
+  --accent-subtle:  rgba(176, 166, 156, 0.10);
+  --accent-ring:    rgba(176, 166, 156, 0.30);
 
-  --badge-bg:       rgba(212, 150, 140, 0.12);
-  --badge-text:     #D4A8A0;
-  --badge-border:   rgba(212, 150, 140, 0.22);
+  --badge-bg:       rgba(196, 140, 135, 0.10);
+  --badge-text:     #C8A8A4;
+  --badge-border:   rgba(196, 140, 135, 0.20);
 
-  --brand:          #D4908A;
-  --brand-hover:    #E4A8A2;
-  --brand-subtle:   rgba(212, 144, 138, 0.12);
-  --brand-border:   rgba(212, 144, 138, 0.28);
-  --brand-ring:     rgba(212, 144, 138, 0.18);
+  --brand:          #C4908A;
+  --brand-hover:    #D4A8A2;
+  --brand-subtle:   rgba(196, 144, 138, 0.12);
+  --brand-border:   rgba(196, 144, 138, 0.26);
+  --brand-ring:     rgba(196, 144, 138, 0.18);
 
   /* Semantic colors */
   --success:        #34d399;
@@ -122,60 +131,6 @@
 
   --shadow-sm:      0 1px 2px rgba(0,0,0,0.25);
   --shadow-md:      0 2px 8px rgba(0,0,0,0.35);
-}
-
-/* ------------------------------------------------------------
-   Dark theme — near black
-   ------------------------------------------------------------ */
-[data-theme="dark"] {
-  --bg-base:        #12100E;
-  --bg-surface:     #1A1714;
-  --bg-raised:      #242019;
-  --border:         #302B26;
-  --border-strong:  #3E3832;
-
-  --text-primary:   #EDE8E2;
-  --text-secondary: #A89E94;
-  --text-muted:     #6E6660;
-
-  --accent:         #8FA3A8;
-  --accent-hover:   #A8BAC0;
-  --accent-subtle:  rgba(143, 163, 168, 0.12);
-  --accent-ring:    rgba(143, 163, 168, 0.22);
-
-  --badge-bg:       rgba(212, 150, 140, 0.12);
-  --badge-text:     #D4A8A0;
-  --badge-border:   rgba(212, 150, 140, 0.22);
-
-  --brand:          #D4908A;
-  --brand-hover:    #E4A8A2;
-  --brand-subtle:   rgba(212, 144, 138, 0.12);
-  --brand-border:   rgba(212, 144, 138, 0.28);
-  --brand-ring:     rgba(212, 144, 138, 0.18);
-
-  /* Semantic colors */
-  --success:        #34d399;
-  --success-bg:     rgba(52, 211, 153, 0.12);
-  --success-border: rgba(52, 211, 153, 0.35);
-
-  --warning:        #fbbf24;
-  --warning-bg:     rgba(251, 191, 36, 0.12);
-  --warning-border: rgba(251, 191, 36, 0.35);
-
-  --info:           #60a5fa;
-  --info-bg:        rgba(96, 165, 250, 0.12);
-  --info-border:    rgba(96, 165, 250, 0.35);
-
-  --error:          #f87171;
-  --error-bg:       rgba(248, 113, 113, 0.12);
-  --error-border:   rgba(248, 113, 113, 0.35);
-
-  /* Voting colors */
-  --upvote:         #10b981;
-  --downvote:       #ef4444;
-
-  --shadow-sm:      0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md:      0 2px 8px rgba(0,0,0,0.5);
 }
 
 /* ------------------------------------------------------------
@@ -263,7 +218,8 @@ p {
 
 a {
   color: var(--accent);
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
   transition: color 0.15s ease;
 }
 
@@ -273,7 +229,6 @@ a:visited {
 
 a:hover {
   color: var(--accent-hover);
-  text-decoration: underline;
 }
 
 button {
@@ -368,14 +323,124 @@ input[type="button"] {
 }
 
 /* ------------------------------------------------------------
-   Accent color presets — applied via JS color picker
-   These override --accent on :root
+   Focus — keyboard navigation
    ------------------------------------------------------------ */
-.accent-blue       { --accent: #4a7fa5; }
-.accent-amber      { --accent: #c9933a; }
-.accent-sage       { --accent: #5a8a6a; }
-.accent-rose       { --accent: #b56070; }
-.accent-teal       { --accent: #3d8c8c; }
-.accent-orange     { --accent: #c46a2d; }
-.accent-violet     { --accent: #7060a8; }
-.accent-steel-red  { --accent: #a04545; }
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------
+   Buttons — shared classes (btn-primary uses --brand)
+   ------------------------------------------------------------ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  min-height: 36px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-primary {
+  color: #ffffff;
+  background: var(--brand);
+  border: 1px solid var(--brand);
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+a.btn-primary,
+a.btn-primary:visited {
+  color: #ffffff;
+}
+
+.btn-secondary {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus-visible {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.btn-ghost {
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.btn-ghost:hover,
+.btn-ghost:focus-visible {
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------
+   Feed loading skeleton
+   ------------------------------------------------------------ */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.skeleton-feed {
+  display: flex;
+  flex-direction: column;
+}
+
+.skeleton-card {
+  padding: var(--space-6) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.skeleton-line {
+  background: var(--border);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-title {
+  height: 1.25rem;
+  width: 78%;
+  margin-bottom: var(--space-4);
+}
+
+.skeleton-meta {
+  height: 0.875rem;
+  width: 45%;
+  margin-bottom: var(--space-2);
+}
+
+.skeleton-metaShort {
+  height: 0.875rem;
+  width: 28%;
+}

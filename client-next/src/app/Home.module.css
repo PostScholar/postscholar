@@ -116,7 +116,7 @@
 
 .activeTab {
   color: var(--text-primary);
-  border-bottom-color: var(--brand);
+  border-bottom-color: var(--accent);
   font-weight: 600;
 }
 
