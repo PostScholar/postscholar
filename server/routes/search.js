@@ -21,12 +21,13 @@ router.get('/', optionalAuth, async (req, res) => {
         `SELECT
            id,
            username,
+           display_name,
            bio,
            affiliation,
            created_at,
            (SELECT COUNT(*) FROM discussions WHERE created_by = users.id) as discussion_count
          FROM users
-         WHERE ($1 = '' OR username ILIKE $2 OR bio ILIKE $2 OR affiliation ILIKE $2)
+         WHERE ($1 = '' OR username ILIKE $2 OR display_name ILIKE $2 OR bio ILIKE $2 OR affiliation ILIKE $2)
          ORDER BY discussion_count DESC
          LIMIT 20`,
         [q, `%${q}%`]

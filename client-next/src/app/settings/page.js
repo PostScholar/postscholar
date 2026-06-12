@@ -12,6 +12,7 @@ export default function SettingsPage() {
   const { user, isLoading, refreshUser } = useAuth()
   const router = useRouter()
   const [bio, setBio] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [affiliation, setAffiliation] = useState('')
   const [location, setLocation] = useState('')
   const [websiteUrl, setWebsiteUrl] = useState('')
@@ -35,6 +36,7 @@ export default function SettingsPage() {
     getMyProfile()
       .then(data => {
         setBio(data.bio || '')
+        setDisplayName(data.display_name || '')
         setAffiliation(data.affiliation || '')
         setLocation(data.location || '')
         setWebsiteUrl(data.website_url || '')
@@ -53,6 +55,7 @@ export default function SettingsPage() {
     try {
       await updateProfile({
         bio,
+        display_name: displayName,
         affiliation,
         location,
         website_url: websiteUrl,
@@ -80,6 +83,25 @@ export default function SettingsPage() {
 
         <section className={styles.section}>
           <h2 className={styles.sectionHeading}>Profile</h2>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Display name</label>
+            <input
+              type="text"
+              className={styles.input}
+              value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              placeholder="How your name appears on comments"
+              maxLength={50}
+            />
+            <span className={styles.hint}>Optional — @username stays your handle for URLs and mentions</span>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Username</label>
+            <div className={styles.readOnly}>@{user.username}</div>
+            <span className={styles.hint}>Used in your profile URL and @mentions</span>
+          </div>
 
           <div className={styles.field}>
             <label className={styles.label}>Bio</label>

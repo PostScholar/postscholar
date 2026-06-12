@@ -24,6 +24,7 @@ describe('POST /auth/register', () => {
 
     expect(res.status).toBe(201)
     expect(res.body.username).toBe(testUsername)
+    expect(res.body.email_verified).toBe(false)
     expect(res.headers['set-cookie']).toBeDefined()
     cookie = res.headers['set-cookie'][0]
   })

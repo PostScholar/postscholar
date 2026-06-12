@@ -57,6 +57,7 @@ router.get('/explore/active', async (req, res) => {
          p.journal,
          p.year,
          u.username,
+         u.display_name,
          (
            SELECT COUNT(*)
            FROM comments c
@@ -234,6 +235,7 @@ router.get('/explore', optionalAuth, async (req, res) => {
          p.journal,
          p.year,
          u.username,
+         u.display_name,
          (
            SELECT COUNT(*)
            FROM comments c

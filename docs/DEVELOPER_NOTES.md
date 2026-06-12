@@ -12,6 +12,7 @@ Technical architecture, design decisions, and implementation details for PostSch
 6. [Third-Party Integrations](#third-party-integrations)
 7. [Performance Considerations](#performance-considerations)
 8. [Known Limitations](#known-limitations)
+9. [Testing](./TESTING.md) — PR checklist and test commands
 
 ## Architecture Overview
 
@@ -144,12 +145,40 @@ Strategic indexes for common queries:
 ### JWT Authentication
 
 **Flow**:
-1. User logs in with email/password
-2. Server verifies credentials via bcrypt
+1. User signs in via email/password, ORCID, Google, or GitHub
+2. Server verifies credentials (bcrypt for local accounts; OAuth token exchange for social)
 3. Server generates JWT with user ID and username
 4. JWT stored in httpOnly cookie (not accessible to JavaScript)
 5. Subsequent requests include cookie automatically
 6. Server verifies JWT on protected routes via `authenticateToken` middleware
+
+### Email verification (local accounts)
+
+Email/password signups receive a verification link via Resend. Users can browse while unverified, but `requireVerifiedEmail` middleware blocks:
+- `POST /discussions` (start discussion)
+- `POST /discussions/:id/comments`
+
+OAuth users (Google, GitHub) and ORCID-linked users skip email verification.
+
+**Endpoints**:
+- `GET /auth/verify-email?token=` — marks account verified
+- `POST /auth/resend-verification` — authenticated resend (rate-limited)
+
+### Social sign-in
+
+| Provider | Routes | Notes |
+|----------|--------|-------|
+| Google | `GET /auth/google/url`, `POST /auth/google/callback` | Redirect URI: `{CLIENT_URL}/auth/google/callback` |
+| GitHub | `GET /auth/github/url`, `POST /auth/github/callback` | Scopes: `read:user`, `user:email` |
+| ORCID login | `GET /auth/orcid/login/url`, `POST /auth/orcid/callback` | New users → `POST /auth/complete` for username |
+| ORCID verify | `GET /auth/orcid/url?discussion_id=` | Author badge flow (unchanged) |
+
+**Env vars**: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, plus existing ORCID and Resend vars.
+
+### Display name
+
+- `username` — permanent handle for URLs and @mentions (read-only in settings)
+- `display_name` — optional human-readable name shown on profile and comments
 
 **Why httpOnly cookies?**
 - Prevents XSS attacks from stealing tokens

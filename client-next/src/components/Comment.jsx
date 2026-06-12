@@ -17,6 +17,10 @@ import CommentBody from './CommentBody'
 import styles from './Comment.module.css'
 import 'katex/dist/katex.min.css'
 
+function authorLabel(comment) {
+  return comment.display_name || comment.username
+}
+
 /**
  * Comment
  *
@@ -199,7 +203,7 @@ export default function Comment({
         {/* Header */}
         <div className={styles.header}>
           <Link href={`/u/${comment.username}`} className={styles.username}>
-            {comment.username}
+            {authorLabel(comment)}
           </Link>
           <AuthorBadge isVerifiedAuthor={comment.is_verified_author} />
           <span className={styles.time}>{timeAgo(comment.created_at)}</span>

@@ -74,7 +74,7 @@ router.get('/suggested', optionalAuth, async (req, res) => {
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, username, bio, avatar_url, profile_visibility, affiliation,
+      `SELECT id, username, display_name, bio, avatar_url, profile_visibility, affiliation,
               location, website_url, twitter_handle, google_scholar_url,
               orcid_id, created_at
        FROM users WHERE id = $1`,
@@ -97,7 +97,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
     const { username } = req.params
 
     const userResult = await pool.query(
-      `SELECT id, username, bio, avatar_url, profile_visibility, affiliation,
+      `SELECT id, username, display_name, bio, avatar_url, profile_visibility, affiliation,
               location, website_url, twitter_handle, google_scholar_url,
               orcid_id, created_at
        FROM users WHERE username = $1`,
@@ -116,6 +116,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
 
     const profile = {
       username: user.username,
+      display_name: user.display_name,
       avatar_url: user.avatar_url,
       bio: visibility.bio || isOwnProfile ? user.bio : null,
       joined_date: visibility.joined_date || isOwnProfile ? user.created_at : null,
@@ -174,6 +175,7 @@ router.patch('/me', authenticateToken, async (req, res) => {
   try {
     const {
       bio,
+      display_name,
       profile_visibility,
       affiliation,
       location,
@@ -190,6 +192,14 @@ router.patch('/me', authenticateToken, async (req, res) => {
     if (bio !== undefined) {
       updates.push(`bio = $${paramCount++}`)
       values.push(bio.trim())
+    }
+    if (display_name !== undefined) {
+      const trimmed = display_name.trim()
+      if (trimmed.length > 50) {
+        return res.status(400).json({ error: 'Display name must be 50 characters or fewer' })
+      }
+      updates.push(`display_name = $${paramCount++}`)
+      values.push(trimmed || null)
     }
     if (profile_visibility !== undefined) {
       updates.push(`profile_visibility = $${paramCount++}`)
@@ -227,7 +237,7 @@ router.patch('/me', authenticateToken, async (req, res) => {
       UPDATE users
       SET ${updates.join(', ')}
       WHERE id = $${paramCount}
-      RETURNING id, username, bio, avatar_url, profile_visibility, affiliation,
+      RETURNING id, username, display_name, bio, avatar_url, profile_visibility, affiliation,
                 location, website_url, twitter_handle, google_scholar_url,
                 orcid_id, created_at
     `

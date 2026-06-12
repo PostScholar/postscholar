@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
+import Logo from './Logo'
 import { Search, Moon, Sun, Menu, X, Bell, User, Settings, LogOut, Shield } from 'lucide-react'
 import { getUnreadMentionCount } from '@/lib/api'
 import styles from './Nav.module.css'
@@ -130,9 +131,7 @@ export default function Nav() {
   return (
     <nav className={styles.nav}>
       <div className={styles.inner}>
-        <Link href="/" className={styles.wordmark}>
-          Post<span className={styles.wordmarkAccent}>Scholar</span>
-        </Link>
+        <Logo variant="full" href="/" />
 
         <form onSubmit={handleSearch} className={styles.search}>
           <input

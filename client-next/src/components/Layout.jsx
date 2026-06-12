@@ -3,6 +3,7 @@
 import { Suspense } from 'react'
 import Nav from './Nav'
 import Footer from './Footer'
+import VerifyEmailBanner from './VerifyEmailBanner'
 import styles from './Layout.module.css'
 
 /**
@@ -20,6 +21,7 @@ export default function Layout({ children, sidebar = null, bare = false, wide = 
       <Suspense fallback={null}>
         <Nav />
       </Suspense>
+      <VerifyEmailBanner />
       <div className={styles.body}>
         {sidebar ? (
           <div className={styles.withSidebar}>
