@@ -1,12 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Flag } from 'lucide-react'
+import { Flag, Plus } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import AuthorBadge from './AuthorBadge'
-import { postComment, editComment, deleteComment, submitReport } from '@/lib/api'
+import {
+  postComment,
+  editComment,
+  deleteComment,
+  submitReport,
+  toggleCommentReaction,
+} from '@/lib/api'
 import CommentBody from './CommentBody'
 import styles from './Comment.module.css'
 import 'katex/dist/katex.min.css'
@@ -56,8 +62,30 @@ export default function Comment({
   const [reportLoading, setReportLoading] = useState(false)
   const [reportSuccess, setReportSuccess] = useState(false)
 
+  const [reactionCount, setReactionCount] = useState(comment.reaction_count || 0)
+  const [userReacted, setUserReacted] = useState(comment.user_reacted || false)
+  const [reactionLoading, setReactionLoading] = useState(false)
+
+  const [repliesCollapsed, setRepliesCollapsed] = useState(depth >= 2)
+  const [isMobile, setIsMobile] = useState(false)
+
   const isOwn = user && user.username === comment.username
   const indentLevel = Math.min(depth, 4)
+  const replyCount = comment.replies?.length || 0
+  const collapseReplies = isMobile && depth >= 2 && replyCount > 0
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 600px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    setReactionCount(comment.reaction_count || 0)
+    setUserReacted(comment.user_reacted || false)
+  }, [comment.reaction_count, comment.user_reacted])
 
   function handleReplyClick() {
     if (!user) {
@@ -112,6 +140,25 @@ export default function Comment({
       onDeleted(comment.id)
     } catch (err) {
       alert(err.message)
+    }
+  }
+
+  async function handleReaction() {
+    if (!user) {
+      router.push('/login')
+      return
+    }
+    if (reactionLoading) return
+
+    setReactionLoading(true)
+    try {
+      const data = await toggleCommentReaction(comment.id)
+      setReactionCount(data.reaction_count)
+      setUserReacted(data.reacted)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setReactionLoading(false)
     }
   }
 
@@ -197,6 +244,19 @@ export default function Comment({
         {/* Actions */}
         {!editing && (
           <div className={styles.actions}>
+            <button
+              type="button"
+              className={`${styles.reactionBtn} ${userReacted ? styles.reactionActive : ''}`}
+              onClick={handleReaction}
+              disabled={reactionLoading}
+              aria-label={userReacted ? 'Remove appreciation' : 'Appreciate comment'}
+              title={user ? 'Appreciate this comment' : 'Sign in to appreciate'}
+            >
+              <Plus size={14} strokeWidth={2.5} />
+              {reactionCount > 0 && (
+                <span className={styles.reactionCount}>{reactionCount}</span>
+              )}
+            </button>
             <button className={styles.actionBtn} onClick={handleReplyClick}>
               Reply
             </button>
@@ -311,17 +371,36 @@ export default function Comment({
         {/* Nested replies */}
         {comment.replies?.length > 0 && (
           <div className={styles.replies}>
-            {comment.replies.map(reply => (
-              <Comment
-                key={reply.id}
-                comment={reply}
-                discussionId={discussionId}
-                onReplyPosted={onReplyPosted}
-                onEdited={onEdited}
-                onDeleted={onDeleted}
-                depth={depth + 1}
-              />
-            ))}
+            {collapseReplies && repliesCollapsed && (
+              <button
+                type="button"
+                className={styles.collapseToggle}
+                onClick={() => setRepliesCollapsed(false)}
+              >
+                Show {replyCount} repl{replyCount === 1 ? 'y' : 'ies'}
+              </button>
+            )}
+            {(!collapseReplies || !repliesCollapsed) &&
+              comment.replies.map(reply => (
+                <Comment
+                  key={reply.id}
+                  comment={reply}
+                  discussionId={discussionId}
+                  onReplyPosted={onReplyPosted}
+                  onEdited={onEdited}
+                  onDeleted={onDeleted}
+                  depth={depth + 1}
+                />
+              ))}
+            {collapseReplies && !repliesCollapsed && (
+              <button
+                type="button"
+                className={styles.collapseToggle}
+                onClick={() => setRepliesCollapsed(true)}
+              >
+                Hide replies
+              </button>
+            )}
           </div>
         )}
       </div>

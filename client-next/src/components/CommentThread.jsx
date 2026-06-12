@@ -12,7 +12,7 @@ import styles from './CommentThread.module.css'
  * CommentThread
  *
  * Renders the full comment section for a discussion.
- * Supports sort options: oldest, newest, top (most replied).
+ * Supports sort options: oldest, newest, top (most appreciated).
  *
  * Props:
  *   discussionId  — UUID
@@ -26,7 +26,7 @@ import styles from './CommentThread.module.css'
 const COMMENT_SORT_OPTIONS = [
   { value: 'oldest', label: 'Oldest first' },
   { value: 'newest', label: 'Newest first' },
-  { value: 'top',    label: 'Most replied' },
+  { value: 'top',    label: 'Most appreciated' },
 ]
 
 export default function CommentThread({

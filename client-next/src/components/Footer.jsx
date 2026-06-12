@@ -9,6 +9,7 @@ export default function Footer() {
         <Link href="/explore" className={styles.link}>Discussions</Link>
         <Link href="/about" className={styles.link}>About</Link>
         <Link href="/privacy" className={styles.link}>Privacy</Link>
+        <Link href="/terms" className={styles.link}>Terms</Link>
         <Link href="/start" className={styles.link}>Start a discussion</Link>
       </div>
       <p className={styles.text}>

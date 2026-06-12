@@ -1,15 +1,32 @@
 import './globals.css'
 import Providers from './Providers'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import { SITE_NAME, SITE_URL } from '@/lib/site'
 
 export const metadata = {
-  title: 'PostScholar — Academic discussion for published research',
-  description: 'Start or join a discussion on any published paper. Paste a DOI. Verified authors get a badge via ORCID.',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — Academic discussion for published research`,
+    template: `%s — ${SITE_NAME}`,
+  },
+  description:
+    'Start or join a discussion on any published paper. Paste a DOI. Verified authors get a badge via ORCID.',
   openGraph: {
-    title: 'PostScholar',
+    title: SITE_NAME,
     description: 'Academic discussion for published research',
-    url: 'https://postscholar.org',
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    locale: 'en_US',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_NAME,
+    description: 'Academic discussion for published research',
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 }
 

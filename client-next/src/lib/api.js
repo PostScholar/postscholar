@@ -101,6 +101,10 @@ export function deleteComment(commentId) {
   return api.delete(`/discussions/comments/${commentId}`)
 }
 
+export function toggleCommentReaction(commentId) {
+  return api.post(`/discussions/comments/${commentId}/react`, {})
+}
+
 /**
  * Delete an entire discussion. Creator only.
  * Returns { deleted: true }
@@ -284,6 +288,10 @@ export function getFollowedTopics() {
 
 export function checkTopicFollow(topic) {
   return api.get(`/topic-follows/check?topic=${encodeURIComponent(topic)}`)
+}
+
+export function getRecentlyActive(limit = 6) {
+  return api.get(`/explore/active?limit=${limit}`)
 }
 
 export function getExplore({ filter, topic, sort, cursor } = {}) {

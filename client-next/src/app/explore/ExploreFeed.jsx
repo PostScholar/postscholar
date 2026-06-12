@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
+import Link from 'next/link'
 import { getFollowingFeed, getBookmarks, getExplore, normalizeDiscussion } from '@/lib/api'
+import { discussionPath } from '@/lib/discussionSlug'
 import FeedCard from '@/components/FeedCard'
 import BrowseSidebar from '@/components/BrowseSidebar'
 import SuggestedAuthors from '@/components/SuggestedAuthors'
@@ -28,7 +30,24 @@ const SORT_OPTIONS = [
   { value: 'pub_date_asc',  label: 'Publication date ↑' },
 ]
 
-export default function ExploreFeed({ initialDiscussions, initialTopics, initialNextCursor = null }) {
+function formatActivityTime(isoString) {
+  if (!isoString) return ''
+  const diff = Date.now() - new Date(isoString).getTime()
+  const mins = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  if (hours < 24) return `${hours}h ago`
+  return `${days}d ago`
+}
+
+export default function ExploreFeed({
+  initialDiscussions,
+  initialTopics,
+  initialNextCursor = null,
+  initialRecentlyActive = [],
+}) {
   const { user } = useAuth()
   const searchParams = useSearchParams()
   const topicFromUrl = searchParams.get('topic') || ''
@@ -41,6 +60,9 @@ export default function ExploreFeed({ initialDiscussions, initialTopics, initial
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
   const [nextCursor, setNextCursor] = useState(initialNextCursor)
+  const [recentlyActive] = useState(
+    (initialRecentlyActive || []).map(normalizeDiscussion)
+  )
 
   const [activeFilter, setActiveFilter] = useState('All')
   const [activeTopic, setActiveTopic] = useState(topicFromUrl)
@@ -162,6 +184,34 @@ export default function ExploreFeed({ initialDiscussions, initialTopics, initial
           <h1 className={styles.heading}>Discussions</h1>
           <p className={styles.subheading}>Browse and filter academic paper threads</p>
         </div>
+
+        {recentlyActive.length > 0 && activeFilter === 'All' && !activeTopic && (
+          <section className={styles.activeSection} aria-label="Recently active discussions">
+            <div className={styles.activeHeader}>
+              <h2 className={styles.activeHeading}>Recently active</h2>
+              <p className={styles.activeSubheading}>
+                Discussions with recent comments
+              </p>
+            </div>
+            <div className={styles.activeGrid}>
+              {recentlyActive.map(d => (
+                <Link
+                  key={d.id}
+                  href={discussionPath({ id: d.id, title: d.title })}
+                  className={styles.activeCard}
+                >
+                  <h3 className={styles.activeTitle}>{d.title}</h3>
+                  <p className={styles.activeMeta}>
+                    {d.comment_count} comment{d.comment_count === 1 ? '' : 's'}
+                    {d.latest_activity && (
+                      <> · {formatActivityTime(d.latest_activity)}</>
+                    )}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className={styles.controlsRow}>
           <div className={styles.mobileBrowse}>

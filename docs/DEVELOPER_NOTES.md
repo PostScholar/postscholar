@@ -70,6 +70,10 @@ PostScholar follows a modern client-server architecture:
 - Cascading deletes when parent comment or discussion is deleted
 - Updated timestamps tracked automatically via trigger
 
+**comment_reactions**
+- Upvote-only "+" reactions (one per user per comment)
+- Used for "top" comment sort; no downvotes
+
 **bookmarks**
 - Many-to-many relationship between users and discussions
 - Composite primary key prevents duplicates
@@ -93,7 +97,7 @@ PostScholar follows a modern client-server architecture:
 
 Location: `server/db/migrations/*.sql`
 
-Migrations are numbered sequentially (001-015 currently) and tracked in `schema_migrations` table.
+Migrations are numbered sequentially (001-019 currently) and tracked in `schema_migrations` table.
 
 **Key patterns**:
 ```sql
@@ -277,7 +281,9 @@ src/
 │   ├── layout.js           # Root layout (Nav, Providers, ErrorBoundary)
 │   ├── page.js             # Home page
 │   ├── not-found.js        # 404 page
-│   ├── d/[id]/page.js      # Discussion page
+│   ├── d/[slug]/page.js    # Discussion page (slug-id URLs, JSON-LD)
+│   ├── sitemap.js          # Dynamic sitemap
+│   ├── robots.js           # Crawler rules
 │   ├── explore/page.js     # Explore feed
 │   ├── profile/[username]/ # User profiles
 │   └── settings/page.js    # Settings
@@ -446,22 +452,15 @@ Currently enforced at application layer, not database:
 
 ### Moderation
 
-No role-based access control yet:
-- `GET /reports` is protected but doesn't check if user is moderator
-- TODO: Add `role` column to users table with 'user', 'moderator', 'admin' roles
-- TODO: Add role check middleware
+Role-based access control is implemented (migration `018_user_roles.sql`):
+- `users.role`: `user` | `moderator` | `admin`
+- Moderators access `/moderation` and `GET /reports`
+- Promote via SQL: `UPDATE users SET role = 'moderator' WHERE username = '...';` then re-login
 
 ### Search
 
-Current search is basic SQL ILIKE:
-```sql
-WHERE title ILIKE '%query%' OR abstract ILIKE '%query%'
-```
-
-Future improvements:
-- Full-text search with `tsvector` and `tsquery`
-- Search ranking with `ts_rank`
-- Highlighted snippets
+Discussion search uses PostgreSQL full-text search (`tsvector` / `tsquery`) on papers.
+Comment search within a discussion uses full-text search on comment bodies.
 
 ### Real-time Updates
 
@@ -477,6 +476,45 @@ Limited test coverage:
 - No frontend tests yet
 - No integration/E2E tests
 - Should add: Jest + React Testing Library + Playwright
+
+## SEO & Discovery
+
+### URL structure
+
+Discussion pages use slug URLs for crawlability:
+
+```
+/d/{slugified-paper-title}-{discussion-uuid}
+```
+
+Legacy `/d/{uuid}` links redirect (308) to the canonical slug URL via `redirect()` in `d/[slug]/page.js`.
+
+Helpers: `client-next/src/lib/discussionSlug.js`, `client-next/src/lib/site.js`.
+
+### Metadata
+
+- Root `layout.js` sets `metadataBase`, Open Graph, and Twitter defaults
+- Discussion pages: `generateMetadata` with canonical URL, article OG tags
+- JSON-LD: `ScholarlyArticle` + `DiscussionForumPosting` on discussion pages
+
+### Sitemap & robots
+
+- **Dynamic sitemap**: `client-next/src/app/sitemap.js` — fetches `GET /sitemap/discussions` from the API, revalidates hourly
+- **robots.txt**: `client-next/src/app/robots.js` — disallows `/settings`, `/moderation`, auth pages
+- Legacy script `client-next/scripts/generate-sitemap.js` is optional fallback only
+
+### Google Search Console (manual)
+
+1. Add property at [Google Search Console](https://search.google.com/search-console) for `https://postscholar.org`
+2. Verify via DNS (Namecheap) or HTML tag
+3. Submit sitemap: `https://postscholar.org/sitemap.xml`
+4. Set preferred domain (apex vs `www`) in GSC; ensure `NEXT_PUBLIC_SITE_URL` matches production canonical
+5. Monitor Coverage and Core Web Vitals after deploy
+
+### Explore discovery
+
+- `GET /explore/active` — recently active discussions (≥1 comment) for the Explore spotlight
+- Default explore sort `recent` uses `latest_activity` (last comment or discussion start)
 
 ## Further Reading
 

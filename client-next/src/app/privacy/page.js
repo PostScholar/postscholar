@@ -3,7 +3,11 @@ import Layout from '@/components/Layout'
 import styles from './Privacy.module.css'
 
 export const metadata = {
-  title: 'Privacy Policy — PostScholar',
+  title: 'Privacy Policy',
+  description: 'Privacy Policy for PostScholar — how we collect and use your data.',
+  alternates: {
+    canonical: '/privacy',
+  },
 }
 
 export default function PrivacyPage() {
@@ -59,6 +63,8 @@ export default function PrivacyPage() {
         </section>
 
         <p className={styles.back}>
+          <Link href="/terms" className={styles.link}>Terms of Service</Link>
+          {' · '}
           <Link href="/" className={styles.link}>← Back to home</Link>
         </p>
       </div>
