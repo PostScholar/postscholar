@@ -151,6 +151,11 @@ export default function CommentThread({
 
       {/* Comments */}
       <div className={styles.comments}>
+        {totalCount === 0 && (
+          <p className={styles.emptyHint}>
+            No comments yet — share a question, critique, or insight to start the thread.
+          </p>
+        )}
         {comments.map(comment => (
           <Comment
             key={comment.id}

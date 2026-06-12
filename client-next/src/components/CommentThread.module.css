@@ -4,6 +4,14 @@
   gap: var(--space-6);
 }
 
+.emptyHint {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0;
+  padding: var(--space-4) 0;
+  line-height: var(--leading-normal);
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -143,7 +151,12 @@
 }
 
 @media (max-width: 600px) {
+  .thread {
+    gap: var(--space-4);
+  }
+
   .header {
+    order: 1;
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-2);
@@ -151,6 +164,22 @@
 
   .heading {
     font-size: var(--text-base);
+  }
+
+  .comments {
+    order: 2;
+  }
+
+  .newCommentForm,
+  .anonPrompt {
+    order: 3;
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    background: var(--bg-base);
+    padding: var(--space-3) 0 var(--space-4);
+    border-top: 1px solid var(--border);
+    margin-top: var(--space-2);
   }
 
   .formFooter {

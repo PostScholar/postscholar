@@ -1,14 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import CommentThread from '@/components/CommentThread'
 import { getComments, searchComments, trackView } from '@/lib/api'
 import styles from './Discussion.module.css'
 
-export default function DiscussionComments({ discussionId }) {
-  const [comments, setComments] = useState([])
-  const [nextCursor, setNextCursor] = useState(null)
-  const [loading, setLoading] = useState(true)
+export default function DiscussionComments({
+  discussionId,
+  initialComments = null,
+  initialNextCursor = null,
+}) {
+  const hasInitial = initialComments !== null
+  const skipFirstFetch = useRef(hasInitial)
+  const [comments, setComments] = useState(initialComments || [])
+  const [nextCursor, setNextCursor] = useState(initialNextCursor)
+  const [loading, setLoading] = useState(!hasInitial)
   const [error, setError] = useState('')
   const [commentSort, setCommentSort] = useState('oldest')
   const [searchQuery, setSearchQuery] = useState('')
@@ -17,6 +23,13 @@ export default function DiscussionComments({ discussionId }) {
 
   useEffect(() => {
     trackView(discussionId).catch(() => {})
+  }, [discussionId])
+
+  useEffect(() => {
+    if (skipFirstFetch.current && commentSort === 'oldest') {
+      skipFirstFetch.current = false
+      return
+    }
     load(true)
   }, [discussionId, commentSort])
 

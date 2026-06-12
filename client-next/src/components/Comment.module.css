@@ -59,6 +59,27 @@
   .reportActions button {
     flex: 1;
     min-width: 0;
+    min-height: 44px;
+  }
+
+  .actionBtn {
+    min-height: 44px;
+    padding: var(--space-2) var(--space-1);
+  }
+
+  .reactionBtn {
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .reportBtn {
+    min-height: 44px;
+    min-width: 44px;
+    justify-content: center;
+  }
+
+  .collapseToggle {
+    min-height: 44px;
   }
 }
 
@@ -110,9 +131,9 @@
 }
 
 .text {
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   color: var(--text-secondary);
-  line-height: var(--leading-loose);
+  line-height: 1.8;
   margin: 0;
 }
 

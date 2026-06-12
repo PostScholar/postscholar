@@ -19,9 +19,8 @@ import { useAuth } from '@/context/AuthContext'
 function formatAuthors(authors) {
   if (!authors || authors.length === 0) return ''
   const names = authors.map(a => a.family).filter(Boolean)
-  if (names.length === 1) return names[0]
-  if (names.length === 2) return `${names[0]} · ${names[1]}`
-  return `${names[0]} · ${names[1]} +${names.length - 2}`
+  if (names.length <= 3) return names.join(' · ')
+  return `${names.slice(0, 3).join(' · ')}, et al.`
 }
 
 function timeAgo(isoString) {
@@ -100,7 +99,16 @@ export default function FeedCard({ discussion: rawDiscussion }) {
           <h2 className={`${styles.title} paper-title`}>{title}</h2>
         </Link>
 
+        {(journal || year) && (
+          <p className={styles.publication}>
+            {journal && <span className={styles.journal}>{journal}</span>}
+            {journal && year && <span className={styles.pubSep}>·</span>}
+            {year && <span className={styles.year}>{year}</span>}
+          </p>
+        )}
+
         <div className={styles.meta}>
+          {authorLine && <span className={styles.metaItem}>{authorLine}</span>}
           {username && (
             <span className={styles.metaItem}>
               <span className={styles.metaLabel}>Started by</span>
@@ -109,9 +117,6 @@ export default function FeedCard({ discussion: rawDiscussion }) {
               </Link>
             </span>
           )}
-          {authorLine && <span className={styles.metaItem}>{authorLine}</span>}
-          {journal && <span className={styles.metaItem}>{journal}</span>}
-          {year && <span className={styles.metaItem}>{year}</span>}
         </div>
 
         {topics.length > 0 && (
