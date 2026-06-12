@@ -4,7 +4,11 @@ import Layout from '@/components/Layout'
 import PaperHeader from '@/components/PaperHeader'
 import PaperSidebar from '@/components/PaperSidebar'
 import DiscussionComments from '../[id]/DiscussionComments'
-import { getServerApiUrl } from '@/lib/config'
+import ServerCommentList from '@/components/ServerCommentList'
+import {
+  getDiscussionPaper,
+  getDiscussionComments,
+} from '@/lib/discussionData'
 import {
   buildDiscussionSlug,
   parseDiscussionId,
@@ -12,26 +16,60 @@ import {
 import { SITE_NAME, SITE_URL } from '@/lib/site'
 import styles from '../[id]/Discussion.module.css'
 
-async function getDiscussionData(id) {
-  try {
-    const res = await fetch(`${getServerApiUrl()}/discussions/${id}/paper`, {
-      cache: 'no-store',
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch (error) {
-    console.error('Failed to fetch discussion data:', error)
-    return null
+function flattenComments(comments, out = []) {
+  for (const comment of comments || []) {
+    out.push(comment)
+    if (comment.replies?.length) flattenComments(comment.replies, out)
   }
+  return out
 }
 
-function buildJsonLd({ paper, discussionId, startedBy, discussionCreatedAt }) {
+function buildJsonLd({
+  paper,
+  discussionId,
+  startedBy,
+  discussionCreatedAt,
+  comments,
+}) {
   const authors = paper.authors_json?.map(a => ({
     '@type': 'Person',
     name: [a.given, a.family].filter(Boolean).join(' '),
   })) || []
 
   const pageUrl = `${SITE_URL}/d/${buildDiscussionSlug(paper.title, discussionId)}`
+  const flatComments = flattenComments(comments)
+
+  const forumPosting = {
+    '@context': 'https://schema.org',
+    '@type': 'DiscussionForumPosting',
+    headline: paper.title,
+    name: paper.title,
+    url: pageUrl,
+    datePublished: discussionCreatedAt,
+    author: startedBy
+      ? { '@type': 'Person', name: startedBy }
+      : { '@type': 'Organization', name: SITE_NAME },
+    about: {
+      '@type': 'ScholarlyArticle',
+      headline: paper.title,
+      identifier: paper.doi ? `https://doi.org/${paper.doi}` : undefined,
+    },
+    isPartOf: {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+  }
+
+  if (flatComments.length > 0) {
+    forumPosting.comment = flatComments.slice(0, 10).map(c => ({
+      '@type': 'Comment',
+      text: c.body,
+      author: { '@type': 'Person', name: c.username },
+      dateCreated: c.created_at,
+    }))
+    forumPosting.commentCount = flatComments.length
+  }
 
   return [
     {
@@ -53,27 +91,7 @@ function buildJsonLd({ paper, discussionId, startedBy, discussionCreatedAt }) {
         url: SITE_URL,
       },
     },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'DiscussionForumPosting',
-      headline: paper.title,
-      name: paper.title,
-      url: pageUrl,
-      datePublished: discussionCreatedAt,
-      author: startedBy
-        ? { '@type': 'Person', name: startedBy }
-        : { '@type': 'Organization', name: SITE_NAME },
-      about: {
-        '@type': 'ScholarlyArticle',
-        headline: paper.title,
-        identifier: paper.doi ? `https://doi.org/${paper.doi}` : undefined,
-      },
-      isPartOf: {
-        '@type': 'WebSite',
-        name: SITE_NAME,
-        url: SITE_URL,
-      },
-    },
+    forumPosting,
   ]
 }
 
@@ -87,7 +105,7 @@ export async function generateMetadata({ params }) {
     }
   }
 
-  const data = await getDiscussionData(id)
+  const data = await getDiscussionPaper(id)
   if (!data || data.error) {
     return {
       title: 'Discussion — PostScholar',
@@ -141,7 +159,10 @@ export default async function DiscussionPage({ params }) {
     )
   }
 
-  const data = await getDiscussionData(id)
+  const [data, commentsData] = await Promise.all([
+    getDiscussionPaper(id),
+    getDiscussionComments(id),
+  ])
 
   if (!data || data.error) {
     return (
@@ -152,6 +173,8 @@ export default async function DiscussionPage({ params }) {
   }
 
   const { paper, started_by, discussion_created_at, custom_tags } = data
+  const initialComments = commentsData.comments || []
+  const initialNextCursor = commentsData.next_cursor || null
   const canonicalSlug = buildDiscussionSlug(paper.title, id)
 
   if (slug !== canonicalSlug) {
@@ -167,6 +190,7 @@ export default async function DiscussionPage({ params }) {
     discussionId: id,
     startedBy: started_by,
     discussionCreatedAt: discussion_created_at,
+    comments: initialComments,
   })
 
   return (
@@ -188,7 +212,15 @@ export default async function DiscussionPage({ params }) {
         />
       )}
       <div className={styles.divider} />
-      <DiscussionComments discussionId={id} />
+      <noscript>
+        <ServerCommentList comments={initialComments} />
+      </noscript>
+      <DiscussionComments
+        key={id}
+        discussionId={id}
+        initialComments={initialComments}
+        initialNextCursor={initialNextCursor}
+      />
     </Layout>
   )
 }
