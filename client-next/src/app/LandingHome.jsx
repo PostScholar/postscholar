@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { discussionPath } from '@/lib/discussionSlug'
 import Layout from '@/components/Layout'
 import styles from './landing.module.css'
 
@@ -101,7 +102,11 @@ export default function LandingHome({ discussions = [] }) {
             ) : (
               <div className={styles.discussionList}>
                 {preview.map(d => (
-                  <Link key={d.id} href={`/d/${d.id}`} className={styles.discussionItem}>
+                  <Link
+                    key={d.id}
+                    href={discussionPath({ id: d.id, title: d.title })}
+                    className={styles.discussionItem}
+                  >
                     <h3 className={`${styles.discussionTitle} paper-title`}>{d.title}</h3>
                     <p className={styles.discussionMeta}>
                       {[d.username || d.started_by, formatAuthors(d.authors_json), d.journal, d.year]

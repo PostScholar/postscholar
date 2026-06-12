@@ -65,6 +65,54 @@ function sanitizeComment(body) {
   })
 }
 
+function collectCommentIds(tree, ids = []) {
+  for (const comment of tree) {
+    ids.push(comment.id)
+    if (comment.replies?.length) {
+      collectCommentIds(comment.replies, ids)
+    }
+  }
+  return ids
+}
+
+function applyReactions(tree, counts, reacted) {
+  for (const comment of tree) {
+    comment.reaction_count = counts.get(comment.id) || 0
+    comment.user_reacted = reacted.has(comment.id)
+    if (comment.replies?.length) {
+      applyReactions(comment.replies, counts, reacted)
+    }
+  }
+  return tree
+}
+
+async function getReactionData(commentIds, userId) {
+  if (commentIds.length === 0) {
+    return { counts: new Map(), reacted: new Set() }
+  }
+
+  const countsResult = await pool.query(
+    `SELECT comment_id, COUNT(*)::int AS count
+     FROM comment_reactions
+     WHERE comment_id = ANY($1::uuid[])
+     GROUP BY comment_id`,
+    [commentIds]
+  )
+  const counts = new Map(countsResult.rows.map(r => [r.comment_id, r.count]))
+
+  let reacted = new Set()
+  if (userId) {
+    const userResult = await pool.query(
+      `SELECT comment_id FROM comment_reactions
+       WHERE comment_id = ANY($1::uuid[]) AND user_id = $2`,
+      [commentIds, userId]
+    )
+    reacted = new Set(userResult.rows.map(r => r.comment_id))
+  }
+
+  return { counts, reacted }
+}
+
 // ---------------------------------------------------------------------------
 // GET /discussions/:id/comments
 // ---------------------------------------------------------------------------
@@ -101,7 +149,7 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
         break
       case 'top':
         orderClause = `ORDER BY (
-          SELECT COUNT(*) FROM comments r WHERE r.parent_comment_id = c.id
+          SELECT COUNT(*) FROM comment_reactions r WHERE r.comment_id = c.id
         ) DESC, c.created_at ASC`
         cursorOp = null
         break
@@ -156,6 +204,13 @@ router.get('/:id/comments', optionalAuth, async (req, res) => {
 
       const allComments = [...pageRows, ...descendantsResult.rows]
       tree = buildTree(allComments, verifiedUserIds)
+
+      const commentIds = collectCommentIds(tree)
+      const { counts, reacted } = await getReactionData(
+        commentIds,
+        req.user?.userId || null
+      )
+      applyReactions(tree, counts, reacted)
     }
 
     const nextCursor = hasNextPage ? pageRows[pageRows.length - 1].created_at : null
@@ -392,6 +447,58 @@ router.patch('/comments/:id', authenticateToken, async (req, res) => {
     return res.json({ comment: result.rows[0] })
   } catch (err) {
     console.error('PATCH /discussions/comments/:id error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// POST /discussions/comments/:id/react
+// ---------------------------------------------------------------------------
+// Protected. Toggle a "+" reaction on a comment (upvote only, no downvote).
+// ---------------------------------------------------------------------------
+router.post('/comments/:id/react', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const commentCheck = await pool.query(
+      'SELECT id FROM comments WHERE id = $1',
+      [id]
+    )
+    if (commentCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Comment not found' })
+    }
+
+    const existing = await pool.query(
+      'SELECT 1 FROM comment_reactions WHERE comment_id = $1 AND user_id = $2',
+      [id, req.user.userId]
+    )
+
+    let reacted
+    if (existing.rows.length > 0) {
+      await pool.query(
+        'DELETE FROM comment_reactions WHERE comment_id = $1 AND user_id = $2',
+        [id, req.user.userId]
+      )
+      reacted = false
+    } else {
+      await pool.query(
+        'INSERT INTO comment_reactions (comment_id, user_id) VALUES ($1, $2)',
+        [id, req.user.userId]
+      )
+      reacted = true
+    }
+
+    const countResult = await pool.query(
+      'SELECT COUNT(*)::int AS count FROM comment_reactions WHERE comment_id = $1',
+      [id]
+    )
+
+    return res.json({
+      reacted,
+      reaction_count: countResult.rows[0].count,
+    })
+  } catch (err) {
+    console.error('POST /discussions/comments/:id/react error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

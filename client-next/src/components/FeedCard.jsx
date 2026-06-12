@@ -7,6 +7,7 @@ import { Bookmark } from 'lucide-react'
 import ShareButton from './ShareButton'
 import styles from './FeedCard.module.css'
 import { createBookmark, removeBookmark, checkBookmark, normalizeDiscussion } from '@/lib/api'
+import { discussionPath } from '@/lib/discussionSlug'
 import { useAuth } from '@/context/AuthContext'
 
 /**
@@ -57,6 +58,7 @@ export default function FeedCard({ discussion: rawDiscussion }) {
 
   const unanswered = comment_count === 0
   const authorLine = formatAuthors(authors_json)
+  const href = discussionPath({ id, title })
 
   useEffect(() => {
     if (user) {
@@ -94,7 +96,7 @@ export default function FeedCard({ discussion: rawDiscussion }) {
   return (
     <article className={styles.card}>
       <div className={styles.cardBody}>
-        <Link href={`/d/${id}`} className={styles.titleLink}>
+        <Link href={href} className={styles.titleLink}>
           <h2 className={`${styles.title} paper-title`}>{title}</h2>
         </Link>
 
@@ -142,7 +144,7 @@ export default function FeedCard({ discussion: rawDiscussion }) {
 
       <div className={styles.cardActions}>
         <ShareButton
-          url={typeof window !== 'undefined' ? `${window.location.origin}/d/${id}` : `/d/${id}`}
+          url={typeof window !== 'undefined' ? `${window.location.origin}${href}` : href}
           title={title}
           size={18}
         />

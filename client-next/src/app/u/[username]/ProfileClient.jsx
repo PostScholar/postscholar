@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { discussionPath } from '@/lib/discussionSlug'
 import { useAuth } from '@/context/AuthContext'
 import { followUser, unfollowUser, getFollowStatus, getFollowCounts } from '@/lib/api'
 import styles from './Profile.module.css'
@@ -185,7 +186,11 @@ export default function ProfileClient({ profile }) {
                 </p>
               ) : (
                 discussions.map(d => (
-                  <Link key={d.id} href={`/d/${d.id}`} className={styles.activityCard}>
+                  <Link
+                    key={d.id}
+                    href={discussionPath({ id: d.id, title: d.title })}
+                    className={styles.activityCard}
+                  >
                     <h3 className={`${styles.cardTitle} paper-title`}>{d.title}</h3>
                     <p className={styles.cardMeta}>
                       {[d.journal, d.year].filter(Boolean).join(' · ')}
@@ -210,7 +215,14 @@ export default function ProfileClient({ profile }) {
                 </p>
               ) : (
                 comments.map(c => (
-                  <Link key={c.id} href={`/d/${c.discussion_id}`} className={styles.activityCard}>
+                  <Link
+                    key={c.id}
+                    href={discussionPath({
+                      id: c.discussion_id,
+                      title: c.paper_title,
+                    })}
+                    className={styles.activityCard}
+                  >
                     <p className={styles.cardLabel}>Comment on</p>
                     <h3 className={`${styles.cardTitle} paper-title`}>{c.paper_title}</h3>
                     <p className={styles.cardBody}>

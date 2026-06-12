@@ -23,12 +23,14 @@
 
 @media (max-width: 600px) {
   .comment {
-    --comment-indent: 10px;
+    --comment-indent: 14px;
     gap: var(--space-2);
   }
 
   .threadLine {
-    display: none;
+    display: block;
+    opacity: 0.5;
+    left: calc(var(--indent, 0) * var(--comment-indent, 14px) - 8px);
   }
 
   .comment[data-is-author="true"] .body {
@@ -119,6 +121,55 @@
   display: flex;
   gap: var(--space-3);
   margin-top: var(--space-3);
+  align-items: center;
+}
+
+.reactionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.reactionBtn:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.reactionActive {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.reactionCount {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.collapseToggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+}
+
+.collapseToggle:hover {
+  text-decoration: underline;
 }
 
 .actionBtn {

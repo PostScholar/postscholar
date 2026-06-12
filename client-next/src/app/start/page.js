@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import Layout from '@/components/Layout'
 import { postComment } from '@/lib/api'
+import { discussionPath } from '@/lib/discussionSlug'
 import { getApiUrl } from '@/lib/config'
 import styles from './Start.module.css'
 
@@ -146,7 +147,12 @@ export default function Start() {
 
       // If a discussion already exists for this paper, redirect immediately
       if (data.existed && data.discussion_id) {
-        router.push(`/d/${data.discussion_id}`)
+        router.push(
+          discussionPath({
+            id: data.discussion_id,
+            title: data.paper?.title,
+          })
+        )
         return
       }
 
@@ -185,7 +191,7 @@ export default function Start() {
         await postComment(discussion_id, openingComment.trim())
       }
 
-      router.push(`/d/${discussion_id}`)
+      router.push(discussionPath({ id: discussion_id, title: paper.title }))
     } catch (err) {
       setErrorMsg(err.message)
     } finally {
@@ -232,7 +238,12 @@ export default function Start() {
         await postComment(discussionData.discussion_id, openingComment.trim())
       }
 
-      router.push(`/d/${discussionData.discussion_id}`)
+      router.push(
+        discussionPath({
+          id: discussionData.discussion_id,
+          title: manual.title || paperData.paper?.title,
+        })
+      )
     } catch (err) {
       setErrorMsg(err.message)
     } finally {

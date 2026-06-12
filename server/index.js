@@ -70,6 +70,7 @@ app.use('/reports', require('./routes/reports'))
 app.use('/follows', require('./routes/follows'))
 app.use('/mentions', require('./routes/mentions'))
 app.use('/topic-follows', require('./routes/topic-follows'))
+app.use('/', require('./routes/sitemap'))
 app.use('/', exploreRouter)
 
 app.use(errorHandler)

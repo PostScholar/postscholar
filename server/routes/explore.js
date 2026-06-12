@@ -39,6 +39,62 @@ router.get('/topics', async (req, res) => {
 })
 
 // ---------------------------------------------------------------------------
+// GET /explore/active
+// ---------------------------------------------------------------------------
+// Public. Returns recently active discussions (at least one comment).
+// Used for the Explore "Recently active" spotlight section.
+// ---------------------------------------------------------------------------
+router.get('/explore/active', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 6, 12)
+
+    const result = await pool.query(
+      `SELECT
+         d.id,
+         d.created_at,
+         p.title,
+         p.authors_json,
+         p.journal,
+         p.year,
+         u.username,
+         (
+           SELECT COUNT(*)
+           FROM comments c
+           WHERE c.discussion_id = d.id
+         )::int AS comment_count,
+         (
+           SELECT MAX(c.created_at)
+           FROM comments c
+           WHERE c.discussion_id = d.id
+         ) AS latest_activity,
+         COALESCE(
+           (
+             SELECT json_agg(json_build_object('name', t.name, 'slug', t.slug))
+             FROM discussion_topics dt
+             JOIN topics t ON t.id = dt.topic_id
+             WHERE dt.discussion_id = d.id
+           ),
+           '[]'::json
+         ) AS topics
+       FROM discussions d
+       JOIN papers p ON p.id = d.paper_id
+       LEFT JOIN users u ON u.id = d.created_by
+       WHERE EXISTS (
+         SELECT 1 FROM comments c WHERE c.discussion_id = d.id
+       )
+       ORDER BY latest_activity DESC
+       LIMIT $1`,
+      [limit]
+    )
+
+    return res.json({ discussions: result.rows })
+  } catch (err) {
+    console.error('GET /explore/active error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ---------------------------------------------------------------------------
 // GET /explore
 // ---------------------------------------------------------------------------
 // Public (optionalAuth). Returns paginated discussions ordered by the chosen
