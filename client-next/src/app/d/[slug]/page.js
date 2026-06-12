@@ -8,6 +8,7 @@ import ServerCommentList from '@/components/ServerCommentList'
 import {
   getDiscussionPaper,
   getDiscussionComments,
+  getDiscussionStats,
 } from '@/lib/discussionData'
 import {
   buildDiscussionSlug,
@@ -22,6 +23,15 @@ function flattenComments(comments, out = []) {
     if (comment.replies?.length) flattenComments(comment.replies, out)
   }
   return out
+}
+
+function getLatestActivity(comments, fallback) {
+  const flat = flattenComments(comments)
+  if (flat.length === 0) return fallback
+  return flat.reduce((latest, c) => {
+    if (!latest || new Date(c.created_at) > new Date(latest)) return c.created_at
+    return latest
+  }, null)
 }
 
 function buildJsonLd({
@@ -159,9 +169,10 @@ export default async function DiscussionPage({ params }) {
     )
   }
 
-  const [data, commentsData] = await Promise.all([
+  const [data, commentsData, stats] = await Promise.all([
     getDiscussionPaper(id),
     getDiscussionComments(id),
+    getDiscussionStats(id),
   ])
 
   if (!data || data.error) {
@@ -175,15 +186,15 @@ export default async function DiscussionPage({ params }) {
   const { paper, started_by, discussion_created_at, custom_tags } = data
   const initialComments = commentsData.comments || []
   const initialNextCursor = commentsData.next_cursor || null
+  const latestActivity = getLatestActivity(
+    initialComments,
+    data.discussion_created_at
+  )
   const canonicalSlug = buildDiscussionSlug(paper.title, id)
 
   if (slug !== canonicalSlug) {
     redirect(`/d/${canonicalSlug}`)
   }
-
-  const sidebar = paper ? (
-    <PaperSidebar paper={paper} discussionId={id} />
-  ) : null
 
   const jsonLd = buildJsonLd({
     paper,
@@ -194,7 +205,7 @@ export default async function DiscussionPage({ params }) {
   })
 
   return (
-    <Layout sidebar={sidebar}>
+    <Layout>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -209,18 +220,30 @@ export default async function DiscussionPage({ params }) {
           discussionCreatedAt={discussion_created_at}
           customTags={custom_tags || []}
           discussionId={id}
+          stats={stats}
+          latestActivity={latestActivity}
         />
       )}
-      <div className={styles.divider} />
-      <noscript>
-        <ServerCommentList comments={initialComments} />
-      </noscript>
-      <DiscussionComments
-        key={id}
-        discussionId={id}
-        initialComments={initialComments}
-        initialNextCursor={initialNextCursor}
-      />
+      <div className={styles.pageLayout}>
+        {paper && (
+          <aside className={styles.pageSidebar}>
+            <PaperSidebar paper={paper} discussionId={id} />
+          </aside>
+        )}
+        <div className={styles.pageMain}>
+          <h2 className={styles.discussionHeader}>Discussion</h2>
+          <div className={styles.divider} />
+          <noscript>
+            <ServerCommentList comments={initialComments} />
+          </noscript>
+          <DiscussionComments
+            key={id}
+            discussionId={id}
+            initialComments={initialComments}
+            initialNextCursor={initialNextCursor}
+          />
+        </div>
+      </div>
     </Layout>
   )
 }

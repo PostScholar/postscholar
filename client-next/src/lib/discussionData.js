@@ -13,6 +13,19 @@ export async function getDiscussionPaper(id) {
   }
 }
 
+export async function getDiscussionStats(id) {
+  try {
+    const res = await fetch(`${getServerApiUrl()}/discussions/${id}/stats`, {
+      cache: 'no-store',
+    })
+    if (!res.ok) return { view_count: 0, comment_count: 0 }
+    return res.json()
+  } catch (error) {
+    console.error('Failed to fetch discussion stats:', error)
+    return { view_count: 0, comment_count: 0 }
+  }
+}
+
 export async function getDiscussionComments(id, sort = 'oldest') {
   try {
     const params = new URLSearchParams()

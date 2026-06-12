@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import FeedCard from '@/components/FeedCard'
 import TopicDropdown from '@/components/TopicDropdown'
@@ -120,7 +121,15 @@ export default function HomeFeed({ initialDiscussions, initialTopics, initialNex
       ) : error ? (
         <p className={styles.errorState}>{error}</p>
       ) : discussions.length === 0 ? (
-        <p className={styles.state}>No discussions found.</p>
+        <div className={styles.emptyState}>
+          <p className={styles.emptyTitle}>No discussions found</p>
+          <p className={styles.emptyText}>
+            Be the first to open a thread on a paper in your field.
+          </p>
+          <Link href="/start" className={styles.emptyCta}>
+            Start a discussion
+          </Link>
+        </div>
       ) : (
         <div className={styles.feed}>
           {discussions.map(d => (

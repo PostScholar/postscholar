@@ -66,13 +66,13 @@ export default function Comment({
   const [userReacted, setUserReacted] = useState(comment.user_reacted || false)
   const [reactionLoading, setReactionLoading] = useState(false)
 
-  const [repliesCollapsed, setRepliesCollapsed] = useState(depth >= 2)
+  const [repliesCollapsed, setRepliesCollapsed] = useState(depth >= 1)
   const [isMobile, setIsMobile] = useState(false)
 
   const isOwn = user && user.username === comment.username
   const indentLevel = Math.min(depth, 4)
   const replyCount = comment.replies?.length || 0
-  const collapseReplies = isMobile && depth >= 2 && replyCount > 0
+  const collapseReplies = isMobile && depth >= 1 && replyCount > 0
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 600px)')

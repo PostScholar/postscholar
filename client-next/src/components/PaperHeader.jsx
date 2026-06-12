@@ -2,22 +2,17 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Bookmark, Quote } from 'lucide-react'
+import { Bookmark, Quote, ExternalLink } from 'lucide-react'
 import ShareButton from './ShareButton'
 import styles from './PaperHeader.module.css'
 import { createBookmark, removeBookmark, checkBookmark } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 
-/**
- * PaperHeader
- *
- * Displays paper title, authors, journal/year, collapsible abstract,
- * custom tags, and who started the discussion + when.
- */
-
 function formatAuthors(authors) {
   if (!authors || authors.length === 0) return ''
-  return authors.map(a => [a.given, a.family].filter(Boolean).join(' ')).join(', ')
+  const names = authors.map(a => [a.given, a.family].filter(Boolean).join(' '))
+  if (names.length <= 3) return names.join(', ')
+  return `${names.slice(0, 3).join(', ')}, et al.`
 }
 
 function timeAgo(isoString) {
@@ -30,12 +25,18 @@ function timeAgo(isoString) {
   if (mins < 60) return `${mins}m ago`
   if (hours < 24) return `${hours}h ago`
   if (days < 30) return `${days}d ago`
-  return new Date(isoString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(isoString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 
 function formatCitation(paper, format) {
   const authors = paper.authors_json || []
-  const authorStr = formatAuthors(authors)
+  const authorStr = authors
+    .map(a => [a.given, a.family].filter(Boolean).join(' '))
+    .join(', ')
   const year = paper.year || 'n.d.'
   const title = paper.title || 'Untitled'
   const journal = paper.journal || ''
@@ -43,11 +44,14 @@ function formatCitation(paper, format) {
 
   if (format === 'apa') {
     return `${authorStr} (${year}). ${title}. ${journal ? `${journal}. ` : ''}${doi ? `https://doi.org/${doi}` : ''}`
-  } else if (format === 'mla') {
+  }
+  if (format === 'mla') {
     return `${authorStr}. "${title}" ${journal ? `${journal}, ` : ''}${year}${doi ? `. https://doi.org/${doi}` : '.'}`
-  } else if (format === 'chicago') {
+  }
+  if (format === 'chicago') {
     return `${authorStr}. "${title}." ${journal ? `${journal} ` : ''}(${year})${doi ? `. https://doi.org/${doi}` : '.'}`
-  } else if (format === 'bibtex') {
+  }
+  if (format === 'bibtex') {
     const key = authors[0]?.family?.toLowerCase() || 'paper'
     return `@article{${key}${year},
   author = {${authorStr}},
@@ -58,13 +62,25 @@ function formatCitation(paper, format) {
   return ''
 }
 
-export default function PaperHeader({ paper, startedBy, discussionCreatedAt, customTags = [], discussionId }) {
+export default function PaperHeader({
+  paper,
+  startedBy,
+  discussionCreatedAt,
+  customTags = [],
+  discussionId,
+  stats = null,
+  latestActivity = null,
+}) {
   const { user } = useAuth()
   const [bookmarked, setBookmarked] = useState(false)
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
   const [citeMenuOpen, setCiteMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const citeMenuRef = useRef(null)
+
+  const commentCount = stats?.comment_count ?? 0
+  const viewCount = stats?.view_count ?? 0
+  const activityTime = latestActivity || discussionCreatedAt
 
   useEffect(() => {
     if (user && discussionId) {
@@ -120,13 +136,11 @@ export default function PaperHeader({ paper, startedBy, discussionCreatedAt, cus
   }
 
   return (
-    <div className={styles.header}>
-      {/* Source badge */}
+    <article className={styles.paperBlock}>
       <div className={styles.sourceBadge}>
-        {paper.source === 'crossref' ? 'Via CrossRef' : 'Manual entry'}
+        {paper.source === 'crossref' ? 'Metadata via CrossRef' : 'Manual entry'}
       </div>
 
-      {/* Title and action buttons */}
       <div className={styles.titleRow}>
         <h1 className={`${styles.title} paper-title`}>{paper.title}</h1>
         <div className={styles.actionButtons}>
@@ -162,10 +176,7 @@ export default function PaperHeader({ paper, startedBy, discussionCreatedAt, cus
             )}
           </div>
           {discussionId && (
-            <ShareButton
-              title={paper.title}
-              className={styles.shareBtn}
-            />
+            <ShareButton title={paper.title} className={styles.shareBtn} />
           )}
           {user && discussionId && (
             <button
@@ -180,43 +191,76 @@ export default function PaperHeader({ paper, startedBy, discussionCreatedAt, cus
         </div>
       </div>
 
-      {/* Authors */}
-      {paper.authors_json?.length > 0 && (
-        <p className={styles.authors}>{formatAuthors(paper.authors_json)}</p>
-      )}
-
-      {/* Journal + year + DOI */}
-      <div className={styles.meta}>
-        {paper.journal && <span>{paper.journal}</span>}
-        {paper.year && <span>{paper.year}</span>}
-        {paper.doi && (
-          <a
-            href={`https://doi.org/${paper.doi}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.doiLink}
-          >
-            {paper.doi}
-          </a>
+      <dl className={styles.metadata}>
+        {paper.authors_json?.length > 0 && (
+          <div className={styles.metaRow}>
+            <dt className={styles.metaLabel}>Authors</dt>
+            <dd className={styles.metaValue}>{formatAuthors(paper.authors_json)}</dd>
+          </div>
         )}
-      </div>
+        {(paper.journal || paper.year) && (
+          <div className={styles.metaRow}>
+            <dt className={styles.metaLabel}>Published</dt>
+            <dd className={styles.metaValue}>
+              {[paper.journal, paper.year].filter(Boolean).join(' · ')}
+            </dd>
+          </div>
+        )}
+        {paper.doi && (
+          <div className={styles.metaRow}>
+            <dt className={styles.metaLabel}>DOI</dt>
+            <dd className={styles.metaValue}>
+              <a
+                href={`https://doi.org/${paper.doi}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.doiLink}
+              >
+                {paper.doi}
+                <ExternalLink size={12} className={styles.externalIcon} aria-hidden />
+              </a>
+            </dd>
+          </div>
+        )}
+      </dl>
 
-      {/* Custom tags */}
       {customTags.length > 0 && (
         <div className={styles.tags}>
           {customTags.map(tag => (
-            <span key={tag} className={styles.tag}>{tag}</span>
+            <span key={tag} className={styles.tag}>
+              {tag}
+            </span>
           ))}
         </div>
       )}
 
-      {/* Who started the discussion */}
-      {startedBy && (
-        <p className={styles.startedBy}>
-          Discussion started by <Link href={`/u/${startedBy}`} className={styles.startedByLink}>{startedBy}</Link>
-          {discussionCreatedAt && <> · {timeAgo(discussionCreatedAt)}</>}
-        </p>
-      )}
-    </div>
+      <p className={styles.activityLine}>
+        {commentCount === 0
+          ? 'No comments yet'
+          : `${commentCount} comment${commentCount === 1 ? '' : 's'}`}
+        {viewCount > 0 && (
+          <>
+            {' · '}
+            {viewCount} view{viewCount === 1 ? '' : 's'}
+          </>
+        )}
+        {activityTime && (
+          <>
+            {' · '}
+            {commentCount > 0 ? 'last activity ' : 'started '}
+            {timeAgo(activityTime)}
+          </>
+        )}
+        {startedBy && (
+          <>
+            {' · '}
+            by{' '}
+            <Link href={`/u/${startedBy}`} className={styles.startedByLink}>
+              {startedBy}
+            </Link>
+          </>
+        )}
+      </p>
+    </article>
   )
 }

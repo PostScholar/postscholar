@@ -18,12 +18,12 @@ export default function LandingHome({ discussions = [] }) {
       <div className={styles.page}>
         <section className={styles.hero}>
           <div className={styles.heroInner}>
-            <div className={styles.badge}>Open academic discussion</div>
+            <div className={styles.badge}>Post-publication discussion</div>
             <h1 className={styles.heroHeading}>
               Where researchers discuss<br />published papers
             </h1>
             <p className={styles.heroSubtext}>
-              PostScholar connects scholarly reading with thoughtful conversation.
+              Post-publication discussion for published research.
               Paste a DOI, start a thread, and engage with authors — verified via ORCID.
             </p>
             <div className={styles.heroCtas}>

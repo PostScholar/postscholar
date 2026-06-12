@@ -182,7 +182,9 @@ export default function ExploreFeed({
       <main className={styles.main}>
         <div className={styles.header}>
           <h1 className={styles.heading}>Discussions</h1>
-          <p className={styles.subheading}>Browse and filter academic paper threads</p>
+          <p className={styles.subheading}>
+            Post-publication discussion for published research
+          </p>
         </div>
 
         {recentlyActive.length > 0 && activeFilter === 'All' && !activeTopic && (
@@ -249,7 +251,19 @@ export default function ExploreFeed({
         ) : error ? (
           <p className={styles.errorState}>{error}</p>
         ) : discussions.length === 0 ? (
-          <p className={styles.state}>No discussions found.</p>
+          <div className={styles.emptyState}>
+            <p className={styles.emptyTitle}>No discussions found</p>
+            <p className={styles.emptyText}>
+              {activeFilter === 'Bookmarks'
+                ? 'Save discussions from the feed to find them here.'
+                : activeFilter === 'Following'
+                  ? 'Follow researchers to see their threads in this tab.'
+                  : 'Be the first to open a thread on a paper in your field.'}
+            </p>
+            <Link href="/start" className={styles.emptyCta}>
+              Start a discussion
+            </Link>
+          </div>
         ) : (
           <div className={styles.feed}>
             {discussions.map(d => (
