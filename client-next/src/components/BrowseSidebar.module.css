@@ -51,10 +51,10 @@
 
 .navLink.active,
 .topicLink.active {
-  background: var(--brand-subtle);
+  background: var(--accent-subtle);
   color: var(--text-primary);
   font-weight: 500;
-  border-left: 2px solid var(--brand);
+  border-left: 2px solid var(--accent);
   padding-left: calc(var(--space-3) - 2px);
 }
 

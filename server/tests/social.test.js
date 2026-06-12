@@ -97,6 +97,25 @@ describe('GET /mentions', () => {
     expect(res.status).toBe(200)
     expect(res.body.mentions.length).toBeGreaterThan(0)
     expect(res.body.mentions[0].mentioning_username).toBe(userB.username)
+    expect(res.body.mentions[0].type).toBe('mention')
+  })
+
+  it('notifies comment author when appreciated', async () => {
+    const reactRes = await request(app)
+      .post(`/discussions/comments/${commentId}/react`)
+      .set('Cookie', cookieA)
+
+    expect(reactRes.status).toBe(200)
+    expect(reactRes.body.reacted).toBe(true)
+
+    const res = await request(app)
+      .get('/mentions')
+      .set('Cookie', cookieB)
+
+    expect(res.status).toBe(200)
+    const appreciation = res.body.mentions.find(m => m.type === 'appreciation')
+    expect(appreciation).toBeDefined()
+    expect(appreciation.mentioning_username).toBe(userA.username)
   })
 })
 

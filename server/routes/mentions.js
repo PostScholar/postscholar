@@ -13,6 +13,7 @@ router.get('/', authenticateToken, async (req, res) => {
         m.comment_id,
         m.created_at,
         m.read,
+        m.type,
         c.body as comment_body,
         u.username as mentioning_username,
         d.id as discussion_id,

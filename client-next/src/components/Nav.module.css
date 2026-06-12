@@ -55,7 +55,7 @@
   display: flex;
   align-items: center;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--bg-surface);
   overflow: hidden;
 }
@@ -130,7 +130,7 @@
   right: 0;
   bottom: -18px;
   height: 2px;
-  background: var(--brand);
+  background: var(--accent);
   border-radius: 1px;
 }
 

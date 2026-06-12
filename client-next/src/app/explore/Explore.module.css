@@ -117,10 +117,10 @@
   }
 
   .mobileTabActive {
-    background: var(--brand-subtle);
+    background: var(--accent-subtle);
     color: var(--text-primary);
     font-weight: 500;
-    border: 1px solid var(--brand-border);
+    border: 1px solid var(--border-strong);
   }
 
   .controlsRow {

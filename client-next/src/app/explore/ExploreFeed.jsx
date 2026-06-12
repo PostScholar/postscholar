@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { getFollowingFeed, getBookmarks, getExplore, normalizeDiscussion } from '@/lib/api'
 import { discussionPath } from '@/lib/discussionSlug'
 import FeedCard from '@/components/FeedCard'
+import FeedSkeleton from '@/components/FeedSkeleton'
 import BrowseSidebar from '@/components/BrowseSidebar'
 import SuggestedAuthors from '@/components/SuggestedAuthors'
 import SortDropdown from '@/components/SortDropdown'
@@ -247,7 +248,7 @@ export default function ExploreFeed({
         </div>
 
         {loading ? (
-          <p className={styles.state}>Loading...</p>
+          <FeedSkeleton rows={5} />
         ) : error ? (
           <p className={styles.errorState}>{error}</p>
         ) : discussions.length === 0 ? (
