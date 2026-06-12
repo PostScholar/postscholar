@@ -10,7 +10,6 @@ const {
 } = require('../lib/session')
 const {
   USERNAME_REGEX,
-  findAvailableUsername,
   formatUserResponse,
 } = require('../lib/oauthUsers')
 
