@@ -81,6 +81,48 @@ describe('Linked accounts', () => {
     expect(google.can_unlink).toBe(false)
   })
 
+  it('keeps one sign-in method when unlink requests run concurrently', async () => {
+    const raceEmail = `race_${ts}@example.com`
+    const raceUsername = `race_${ts}`
+    const inserted = await pool.query(
+      `INSERT INTO users (username, email, password_hash, google_id, email_verified)
+       VALUES ($1, $2, $3, $4, true)
+       RETURNING id`,
+      [raceUsername, raceEmail, 'hash', `google_race_${ts}`]
+    )
+    const raceUserId = inserted.rows[0].id
+
+    const token = require('../lib/session').signToken({
+      userId: raceUserId,
+      username: raceUsername,
+    })
+    const raceCookie = `token=${token}; Path=/`
+
+    try {
+      const responses = await Promise.all([
+        request(app)
+          .delete('/users/me/connections/password')
+          .set('Cookie', raceCookie),
+        request(app)
+          .delete('/users/me/connections/google')
+          .set('Cookie', raceCookie),
+      ])
+
+      expect(responses.map(res => res.status).sort()).toEqual([200, 400])
+      expect(responses.find(res => res.status === 400).body.code).toBe('LAST_SIGN_IN_METHOD')
+
+      const stored = await pool.query(
+        'SELECT password_hash, google_id FROM users WHERE id = $1',
+        [raceUserId]
+      )
+      const remainingMethods = Number(Boolean(stored.rows[0].password_hash)) +
+        Number(Boolean(stored.rows[0].google_id))
+      expect(remainingMethods).toBe(1)
+    } finally {
+      await pool.query('DELETE FROM users WHERE id = $1', [raceUserId])
+    }
+  })
+
   it('sets a password for OAuth-only users with email', async () => {
     const oauthEmail = `oauth_${ts}@example.com`
     const oauthUser = `oauth_${ts}`
