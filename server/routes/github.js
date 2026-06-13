@@ -167,6 +167,12 @@ router.post('/callback', async (req, res) => {
     setTokenCookie(res, sessionToken)
     res.json(formatUserResponse(user))
   } catch (err) {
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({
+        error: err.message,
+        ...(err.code ? { code: err.code } : {}),
+      })
+    }
     console.error('POST /auth/github/callback error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }

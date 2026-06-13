@@ -1,6 +1,7 @@
 const express = require('express')
 const jwt = require('jsonwebtoken')
 const db = require('../db')
+const AppError = require('../lib/AppError')
 const {
   signToken,
   setTokenCookie,
@@ -119,7 +120,7 @@ router.post('/callback', async (req, res) => {
       provider: 'google',
       providerId: profile.id,
       email: profile.email,
-      emailVerified: profile.verified_email !== false,
+      emailVerified: profile.verified_email === true,
       displayName: profile.name,
       usernameBase: profile.email?.split('@')[0] || profile.given_name || 'user',
     })
@@ -128,6 +129,12 @@ router.post('/callback', async (req, res) => {
     setTokenCookie(res, sessionToken)
     res.json(formatUserResponse(user))
   } catch (err) {
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({
+        error: err.message,
+        ...(err.code ? { code: err.code } : {}),
+      })
+    }
     console.error('POST /auth/google/callback error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
@@ -158,6 +165,13 @@ async function findOrCreateOAuthUser({
     )
     if (byEmail.rows[0]) {
       const existing = byEmail.rows[0]
+      if (!existing.email_verified || !emailVerified) {
+        throw new AppError(
+          'An account already exists for this email. Verify the email on that account before linking a social sign-in.',
+          409,
+          'OAUTH_EMAIL_REQUIRES_VERIFICATION'
+        )
+      }
       await db.query(
         `UPDATE users
          SET ${idColumn} = $1,
