@@ -1,5 +1,4 @@
 const request = require('supertest')
-const bcrypt = require('bcrypt')
 const app = require('../index')
 const pool = require('../db')
 
@@ -85,7 +84,6 @@ describe('Linked accounts', () => {
   it('sets a password for OAuth-only users with email', async () => {
     const oauthEmail = `oauth_${ts}@example.com`
     const oauthUser = `oauth_${ts}`
-    const hash = await bcrypt.hash('unused', 12)
 
     const inserted = await pool.query(
       `INSERT INTO users (username, email, google_id, email_verified)
