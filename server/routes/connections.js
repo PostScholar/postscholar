@@ -67,16 +67,28 @@ router.post('/password', authenticateToken, async (req, res) => {
 })
 
 router.delete('/:provider', authenticateToken, async (req, res) => {
+  let client
   try {
     const { provider } = req.params
     if (!PROVIDERS.includes(provider)) {
       return res.status(400).json({ error: 'Invalid provider' })
     }
 
-    const user = await getAuthUser(req.user.userId)
-    if (!user) return res.status(404).json({ error: 'User not found' })
+    client = await pool.connect()
+    await client.query('BEGIN')
+
+    const result = await client.query(
+      `SELECT ${AUTH_FIELDS} FROM users WHERE id = $1 FOR UPDATE`,
+      [req.user.userId]
+    )
+    const user = result.rows[0] || null
+    if (!user) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'User not found' })
+    }
 
     if (!canUnlinkProvider(user, provider)) {
+      await client.query('ROLLBACK')
       return res.status(400).json({
         error: 'Add another sign-in method before removing this one',
         code: 'LAST_SIGN_IN_METHOD',
@@ -90,16 +102,31 @@ router.delete('/:provider', authenticateToken, async (req, res) => {
       orcid: 'orcid_id',
     }
 
-    await pool.query(
+    await client.query(
       `UPDATE users SET ${columnMap[provider]} = NULL WHERE id = $1`,
       [req.user.userId]
     )
 
-    const updated = await getAuthUser(req.user.userId)
+    const updatedResult = await client.query(
+      `SELECT ${AUTH_FIELDS} FROM users WHERE id = $1`,
+      [req.user.userId]
+    )
+    await client.query('COMMIT')
+
+    const updated = updatedResult.rows[0]
     res.json(buildConnectionsResponse(updated))
   } catch (err) {
+    if (client) {
+      try {
+        await client.query('ROLLBACK')
+      } catch (_rollbackErr) {
+        // Preserve the original error for logging and response handling.
+      }
+    }
     console.error('DELETE /users/me/connections/:provider error:', err)
     res.status(500).json({ error: 'Internal server error' })
+  } finally {
+    if (client) client.release()
   }
 })
 
