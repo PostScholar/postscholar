@@ -81,6 +81,54 @@ describe('Linked accounts', () => {
     expect(google.can_unlink).toBe(false)
   })
 
+  it('keeps one sign-in method when unlink requests race', async () => {
+    const raceEmail = `race_${ts}@example.com`
+    const raceUsername = `race_${ts}`
+    let raceUserId = null
+
+    try {
+      const register = await request(app)
+        .post('/auth/register')
+        .send({ email: raceEmail, username: raceUsername, password: testPassword })
+
+      expect(register.status).toBe(201)
+      const raceCookie = register.headers['set-cookie'][0]
+
+      const me = await request(app).get('/auth/me').set('Cookie', raceCookie)
+      raceUserId = me.body.id
+
+      await pool.query(
+        'UPDATE users SET google_id = $1 WHERE id = $2',
+        [`google_race_${ts}`, raceUserId]
+      )
+
+      const [passwordRes, googleRes] = await Promise.all([
+        request(app)
+          .delete('/users/me/connections/password')
+          .set('Cookie', raceCookie),
+        request(app)
+          .delete('/users/me/connections/google')
+          .set('Cookie', raceCookie),
+      ])
+
+      expect([passwordRes.status, googleRes.status].sort()).toEqual([200, 400])
+
+      const finalState = await request(app)
+        .get('/users/me/connections')
+        .set('Cookie', raceCookie)
+
+      expect(finalState.status).toBe(200)
+      expect(finalState.body.sign_in_method_count).toBe(1)
+      expect(finalState.body.connections.filter(c => c.linked)).toHaveLength(1)
+    } finally {
+      if (raceUserId) {
+        await pool.query('DELETE FROM users WHERE id = $1', [raceUserId])
+      } else {
+        await pool.query('DELETE FROM users WHERE email = $1', [raceEmail])
+      }
+    }
+  })
+
   it('sets a password for OAuth-only users with email', async () => {
     const oauthEmail = `oauth_${ts}@example.com`
     const oauthUser = `oauth_${ts}`
