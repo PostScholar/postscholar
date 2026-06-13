@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { getApiUrl } from '@/lib/config'
 import { useAuth } from '@/context/AuthContext'
@@ -12,8 +12,11 @@ function OrcidCallbackInner() {
   const { refreshUser } = useAuth()
   const [status, setStatus] = useState('loading')
   const [message, setMessage] = useState('')
+  const exchanged = useRef(false)
 
   useEffect(() => {
+    if (exchanged.current) return
+
     const code = searchParams.get('code')
     const state = searchParams.get('state')
 
@@ -22,6 +25,8 @@ function OrcidCallbackInner() {
       setMessage('Invalid callback — missing code or state.')
       return
     }
+
+    exchanged.current = true
 
     async function exchange() {
       try {
@@ -45,6 +50,13 @@ function OrcidCallbackInner() {
           })
           if (data.display_name) params.set('name', data.display_name)
           router.replace(`/auth/complete?${params.toString()}`)
+          return
+        }
+
+        if (data.linked && data.mode === 'link') {
+          setStatus('success')
+          setMessage('ORCID connected to your account.')
+          router.replace('/settings?linked=orcid')
           return
         }
 

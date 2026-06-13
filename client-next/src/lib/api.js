@@ -282,6 +282,18 @@ export function getMyProfile() {
   return api.get('/users/me')
 }
 
+export function getConnections() {
+  return api.get('/users/me/connections')
+}
+
+export function unlinkConnection(provider) {
+  return api.delete(`/users/me/connections/${provider}`)
+}
+
+export function setConnectionPassword(password) {
+  return api.post('/users/me/connections/password', { password })
+}
+
 export function getFollowedTopics() {
   return api.get('/topic-follows')
 }

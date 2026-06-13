@@ -79,12 +79,25 @@ async function exchangeOrcidCode(code) {
   return tokenRes.json()
 }
 
-// GET /auth/orcid/url?mode=login
+// GET /auth/orcid/login/url
 router.get('/login/url', (req, res) => {
   if (!process.env.ORCID_CLIENT_ID) {
     return res.status(503).json({ error: 'ORCID sign-in is not configured' })
   }
   const state = signOAuthState({ mode: 'login', provider: 'orcid' })
+  return res.json({ url: buildOrcidAuthUrl(state) })
+})
+
+// GET /auth/orcid/link/url — link ORCID to existing account
+router.get('/link/url', authenticateToken, (req, res) => {
+  if (!process.env.ORCID_CLIENT_ID) {
+    return res.status(503).json({ error: 'ORCID sign-in is not configured' })
+  }
+  const state = signOAuthState({
+    mode: 'link',
+    provider: 'orcid',
+    userId: req.user.userId,
+  })
   return res.json({ url: buildOrcidAuthUrl(state) })
 })
 
@@ -148,6 +161,10 @@ router.post('/callback', async (req, res) => {
       return handleOrcidLogin(req, res, { orcidId, displayName })
     }
 
+    if (statePayload.mode === 'link') {
+      return handleOrcidLink(req, res, { statePayload, orcidId, displayName })
+    }
+
     return handleOrcidVerify(req, res, {
       statePayload,
       orcidId,
@@ -187,6 +204,52 @@ async function handleOrcidLogin(req, res, { orcidId, displayName }) {
     display_name: displayName,
     mode: 'login',
   })
+}
+
+async function handleOrcidLink(req, res, { statePayload, orcidId, displayName }) {
+  const token = req.cookies?.token
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication required' })
+  }
+
+  let decoded
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET)
+  } catch {
+    return res.status(401).json({ error: 'Invalid session' })
+  }
+
+  if (statePayload.userId !== decoded.userId) {
+    return res.status(403).json({ error: 'State mismatch' })
+  }
+
+  const taken = await pool.query(
+    'SELECT id FROM users WHERE orcid_id = $1 AND id != $2',
+    [orcidId, decoded.userId]
+  )
+  if (taken.rows.length > 0) {
+    return res.status(409).json({
+      error: 'This ORCID iD is already linked to another PostScholar account',
+    })
+  }
+
+  const current = await pool.query(
+    'SELECT orcid_id FROM users WHERE id = $1',
+    [decoded.userId]
+  )
+  if (current.rows[0]?.orcid_id) {
+    return res.status(400).json({ error: 'ORCID already linked to your account' })
+  }
+
+  await pool.query(
+    `UPDATE users
+     SET orcid_id = $1,
+         display_name = COALESCE(display_name, $2)
+     WHERE id = $3`,
+    [orcidId, displayName, decoded.userId]
+  )
+
+  return res.json({ linked: true, provider: 'orcid', orcid_id: orcidId, mode: 'link' })
 }
 
 async function handleOrcidVerify(req, res, { statePayload, orcidId, orcidGiven, orcidFamily }) {

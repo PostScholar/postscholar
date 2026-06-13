@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { updateProfile, getMyProfile } from '@/lib/api'
 import Layout from '@/components/Layout'
+import LinkedAccounts from '@/components/LinkedAccounts'
 import styles from './Settings.module.css'
 
 export default function SettingsPage() {
@@ -202,6 +203,16 @@ export default function SettingsPage() {
               {saving ? 'Saving…' : saved ? 'Saved' : 'Save changes'}
             </button>
           </div>
+        </section>
+
+        <section className={styles.section}>
+          <h2 className={styles.sectionHeading}>Sign-in methods</h2>
+          <p className={styles.sectionDesc}>
+            View and manage accounts linked for signing in — Google, GitHub, ORCID, or email.
+          </p>
+          <Suspense fallback={<p className={styles.sectionDesc}>Loading…</p>}>
+            <LinkedAccounts />
+          </Suspense>
         </section>
 
         <section className={styles.section}>

@@ -4,6 +4,8 @@ const pool = require('../db')
 const authenticateToken = require('../middleware/authenticateToken')
 const optionalAuth = require('../middleware/optionalAuth')
 
+router.use('/me/connections', require('./connections'))
+
 router.get('/suggested', optionalAuth, async (req, res) => {
   try {
     const currentUserId = req.user?.userId

@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { getApiUrl } from '@/lib/config'
 import { useAuth } from '@/context/AuthContext'
@@ -11,14 +11,19 @@ function OAuthCallback({ provider, endpoint }) {
   const router = useRouter()
   const { refreshUser } = useAuth()
   const [message, setMessage] = useState(`Signing in with ${provider}…`)
+  const exchanged = useRef(false)
 
   useEffect(() => {
+    if (exchanged.current) return
+
     const code = searchParams.get('code')
     const state = searchParams.get('state')
     if (!code || !state) {
       setMessage('Invalid callback — missing code or state.')
       return
     }
+
+    exchanged.current = true
 
     async function exchange() {
       try {
@@ -33,6 +38,13 @@ function OAuthCallback({ provider, endpoint }) {
           setMessage(data.error || 'Sign-in failed')
           return
         }
+
+        if (data.linked && data.mode === 'link') {
+          setMessage(`${provider} connected. Redirecting to settings…`)
+          router.push(`/settings?linked=${data.provider}`)
+          return
+        }
+
         await refreshUser()
         router.push('/')
       } catch {
@@ -41,7 +53,7 @@ function OAuthCallback({ provider, endpoint }) {
     }
 
     exchange()
-  }, [searchParams, router, refreshUser, endpoint])
+  }, [searchParams, router, endpoint, provider, refreshUser])
 
   return (
     <div className={styles.page}>

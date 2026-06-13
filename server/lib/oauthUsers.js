@@ -38,9 +38,58 @@ function formatUserResponse(user) {
   }
 }
 
+async function linkOAuthProvider(userId, provider, providerId, opts = {}) {
+  const pool = require('../db')
+  const idColumn = provider === 'google' ? 'google_id' : 'github_id'
+
+  const taken = await pool.query(
+    `SELECT id FROM users WHERE ${idColumn} = $1 AND id != $2`,
+    [providerId, userId]
+  )
+  if (taken.rows.length > 0) {
+    const err = new Error('This account is already linked to another PostScholar user')
+    err.code = 'PROVIDER_TAKEN'
+    throw err
+  }
+
+  const current = await pool.query(
+    `SELECT google_id, github_id FROM users WHERE id = $1`,
+    [userId]
+  )
+  if (current.rows[0]?.[idColumn]) {
+    const err = new Error('Provider already linked to your account')
+    err.code = 'ALREADY_LINKED'
+    throw err
+  }
+
+  const updates = [`${idColumn} = $1`]
+  const values = [providerId]
+  let param = 2
+
+  if (opts.email) {
+    updates.push(`email = COALESCE(email, $${param++})`)
+    values.push(opts.email)
+  }
+  if (opts.emailVerified) {
+    updates.push(`email_verified = CASE WHEN $${param++} THEN true ELSE email_verified END`)
+    values.push(true)
+  }
+  if (opts.displayName) {
+    updates.push(`display_name = COALESCE(display_name, $${param++})`)
+    values.push(opts.displayName)
+  }
+
+  values.push(userId)
+  await pool.query(
+    `UPDATE users SET ${updates.join(', ')} WHERE id = $${param}`,
+    values
+  )
+}
+
 module.exports = {
   USERNAME_REGEX,
   sanitizeUsernameBase,
   findAvailableUsername,
   formatUserResponse,
+  linkOAuthProvider,
 }
