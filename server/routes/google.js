@@ -1,4 +1,5 @@
 const express = require('express')
+const jwt = require('jsonwebtoken')
 const db = require('../db')
 const {
   signToken,
@@ -6,7 +7,8 @@ const {
   signOAuthState,
   verifyOAuthState,
 } = require('../lib/session')
-const { findAvailableUsername, formatUserResponse } = require('../lib/oauthUsers')
+const { findAvailableUsername, formatUserResponse, linkOAuthProvider } = require('../lib/oauthUsers')
+const authenticateToken = require('../middleware/authenticateToken')
 
 const router = express.Router()
 
@@ -14,12 +16,17 @@ const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
 
-router.get('/url', (req, res) => {
-  if (!process.env.GOOGLE_CLIENT_ID) {
-    return res.status(503).json({ error: 'Google sign-in is not configured' })
+function getUserIdFromCookie(req) {
+  const token = req.cookies?.token
+  if (!token) return null
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET).userId
+  } catch {
+    return null
   }
+}
 
-  const state = signOAuthState({ provider: 'google', mode: 'login' })
+function buildGoogleAuthUrl(state) {
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
     redirect_uri: `${process.env.CLIENT_URL}/auth/google/callback`,
@@ -29,9 +36,49 @@ router.get('/url', (req, res) => {
     access_type: 'online',
     prompt: 'select_account',
   })
+  return `${GOOGLE_AUTH_URL}?${params.toString()}`
+}
 
-  res.json({ url: `${GOOGLE_AUTH_URL}?${params.toString()}` })
+router.get('/url', (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    return res.status(503).json({ error: 'Google sign-in is not configured' })
+  }
+  const state = signOAuthState({ provider: 'google', mode: 'login' })
+  res.json({ url: buildGoogleAuthUrl(state) })
 })
+
+router.get('/link/url', authenticateToken, (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    return res.status(503).json({ error: 'Google sign-in is not configured' })
+  }
+  const state = signOAuthState({
+    provider: 'google',
+    mode: 'link',
+    userId: req.user.userId,
+  })
+  res.json({ url: buildGoogleAuthUrl(state) })
+})
+
+async function exchangeGoogleCode(code) {
+  const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: `${process.env.CLIENT_URL}/auth/google/callback`,
+      grant_type: 'authorization_code',
+    }),
+  })
+  if (!tokenRes.ok) return null
+  const tokenData = await tokenRes.json()
+  const userRes = await fetch(GOOGLE_USERINFO_URL, {
+    headers: { Authorization: `Bearer ${tokenData.access_token}` },
+  })
+  if (!userRes.ok) return null
+  return userRes.json()
+}
 
 router.post('/callback', async (req, res) => {
   try {
@@ -45,34 +92,27 @@ router.post('/callback', async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired state' })
     }
 
-    const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: `${process.env.CLIENT_URL}/auth/google/callback`,
-        grant_type: 'authorization_code',
-      }),
-    })
-
-    if (!tokenRes.ok) {
-      return res.status(502).json({ error: 'Failed to exchange Google code' })
-    }
-
-    const tokenData = await tokenRes.json()
-    const userRes = await fetch(GOOGLE_USERINFO_URL, {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    })
-
-    if (!userRes.ok) {
+    const profile = await exchangeGoogleCode(code)
+    if (!profile?.id) {
       return res.status(502).json({ error: 'Failed to fetch Google profile' })
     }
 
-    const profile = await userRes.json()
-    if (!profile.id) {
-      return res.status(502).json({ error: 'Invalid Google profile' })
+    if (statePayload.mode === 'link') {
+      const userId = getUserIdFromCookie(req)
+      if (!userId || userId !== statePayload.userId) {
+        return res.status(403).json({ error: 'Session mismatch' })
+      }
+      try {
+        await linkOAuthProvider(userId, 'google', profile.id, {
+          email: profile.email,
+          emailVerified: profile.verified_email !== false,
+          displayName: profile.name,
+        })
+      } catch (err) {
+        const status = err.code === 'PROVIDER_TAKEN' ? 409 : 400
+        return res.status(status).json({ error: err.message })
+      }
+      return res.json({ linked: true, provider: 'google', mode: 'link' })
     }
 
     const user = await findOrCreateOAuthUser({
