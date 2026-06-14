@@ -1,23 +1,17 @@
 const pool = require('../db')
 
 /**
- * Blocks posting for local email/password users until email is verified.
- * OAuth and ORCID-linked users may post without email verification.
+ * Blocks posting until the account's stored email identity is verified.
  */
 async function requireVerifiedEmail(req, res, next) {
   try {
     const result = await pool.query(
-      `SELECT email_verified, google_id, github_id, orcid_id
-       FROM users WHERE id = $1`,
+      'SELECT email_verified FROM users WHERE id = $1',
       [req.user.userId]
     )
     const user = result.rows[0]
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' })
-    }
-
-    if (user.google_id || user.github_id || user.orcid_id) {
-      return next()
     }
 
     if (!user.email_verified) {

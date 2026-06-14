@@ -41,6 +41,7 @@ function formatUserResponse(user) {
 async function linkOAuthProvider(userId, provider, providerId, opts = {}) {
   const pool = require('../db')
   const idColumn = provider === 'google' ? 'google_id' : 'github_id'
+  const providerEmail = opts.email?.toLowerCase()
 
   const taken = await pool.query(
     `SELECT id FROM users WHERE ${idColumn} = $1 AND id != $2`,
@@ -53,7 +54,7 @@ async function linkOAuthProvider(userId, provider, providerId, opts = {}) {
   }
 
   const current = await pool.query(
-    `SELECT google_id, github_id FROM users WHERE id = $1`,
+    `SELECT email, google_id, github_id FROM users WHERE id = $1`,
     [userId]
   )
   if (current.rows[0]?.[idColumn]) {
@@ -70,7 +71,11 @@ async function linkOAuthProvider(userId, provider, providerId, opts = {}) {
     updates.push(`email = COALESCE(email, $${param++})`)
     values.push(opts.email)
   }
-  if (opts.emailVerified) {
+  const canVerifyStoredEmail = opts.email && opts.emailVerified && (
+    !current.rows[0]?.email ||
+    current.rows[0].email.toLowerCase() === providerEmail
+  )
+  if (canVerifyStoredEmail) {
     updates.push(`email_verified = CASE WHEN $${param++} THEN true ELSE email_verified END`)
     values.push(true)
   }
