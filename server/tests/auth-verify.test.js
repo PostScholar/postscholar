@@ -70,6 +70,21 @@ describe('Email verification flow', () => {
     expect(res.body.code).toBe('EMAIL_UNVERIFIED')
   })
 
+  it('still blocks posting when an unverified user links an OAuth provider', async () => {
+    await pool.query(
+      'UPDATE users SET google_id = $1 WHERE id = $2',
+      [`google_verify_${ts}`, userId]
+    )
+
+    const res = await request(app)
+      .post(`/discussions/${discussionId}/comments`)
+      .set('Cookie', cookie)
+      .send({ body: 'OAuth link should not bypass email verification' })
+
+    expect(res.status).toBe(403)
+    expect(res.body.code).toBe('EMAIL_UNVERIFIED')
+  })
+
   it('allows posting after email verification', async () => {
     const rawToken = crypto.randomBytes(32).toString('hex')
     await pool.query(

@@ -4,6 +4,7 @@ jest.mock('../db', () => ({
 
 const db = require('../db')
 const { findOrCreateOAuthUser } = require('../routes/google')
+const { linkOAuthProvider } = require('../lib/oauthUsers')
 
 beforeEach(() => {
   db.query.mockReset()
@@ -114,5 +115,60 @@ describe('findOrCreateOAuthUser', () => {
     })
 
     expect(db.query).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('linkOAuthProvider', () => {
+  it('does not verify an existing account email with a different provider email', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          email: 'local@example.com',
+          google_id: null,
+          github_id: null,
+        }],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+
+    await linkOAuthProvider('user-1', 'google', 'google-1', {
+      email: 'provider@example.com',
+      emailVerified: true,
+    })
+
+    expect(db.query).toHaveBeenCalledTimes(3)
+    expect(db.query.mock.calls[2][0]).not.toContain('email_verified')
+    expect(db.query.mock.calls[2][1]).toEqual([
+      'google-1',
+      'provider@example.com',
+      'user-1',
+    ])
+  })
+
+  it('verifies the stored account email when the provider confirms the same email', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          email: 'local@example.com',
+          google_id: null,
+          github_id: null,
+        }],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+
+    await linkOAuthProvider('user-1', 'google', 'google-1', {
+      email: 'LOCAL@example.com',
+      emailVerified: true,
+    })
+
+    expect(db.query).toHaveBeenCalledTimes(3)
+    expect(db.query.mock.calls[2][0]).toContain('email_verified')
+    expect(db.query.mock.calls[2][1]).toEqual([
+      'google-1',
+      'LOCAL@example.com',
+      true,
+      'user-1',
+    ])
   })
 })
