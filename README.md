@@ -18,7 +18,7 @@ PostScholar is an academic discussion platform where researchers can discuss res
 - **Frontend**: Next.js 16, React 19
 - **Backend**: Express 5, Node.js
 - **Database**: PostgreSQL
-- **Auth**: JWT with httpOnly cookies
+- **Auth**: JWT with httpOnly cookies, email/password, ORCID, Google, and GitHub
 - **Deployment**: Vercel (frontend) + Railway (backend)
 
 ## Quick Start
@@ -64,6 +64,12 @@ JWT_SECRET=your-secret-key
 CLIENT_URL=http://localhost:3001
 ORCID_CLIENT_ID=your-orcid-client-id
 ORCID_CLIENT_SECRET=your-orcid-client-secret
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+RESEND_API_KEY=your-resend-api-key
+EMAIL_FROM=PostScholar <noreply@postscholar.org>
 PORT=3000
 ```
 
