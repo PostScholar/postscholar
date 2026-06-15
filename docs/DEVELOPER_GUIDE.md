@@ -63,6 +63,7 @@ PORT=3000
 ```
 
 ORCID redirect is derived from `CLIENT_URL` (`{CLIENT_URL}/orcid/callback`).
+Google and GitHub callbacks also use the frontend URL (`{CLIENT_URL}/auth/google/callback` and `{CLIENT_URL}/auth/github/callback`).
 
 **client-next/.env.local**:
 ```env
@@ -163,6 +164,7 @@ PostScholar uses Vercel for frontend hosting.
 
 2. **Configure environment variables in Vercel**:
    - `NEXT_PUBLIC_API_URL` → Your Railway backend URL
+   - `API_URL` → Same Railway backend URL for server-side rendering and `/api` rewrites
 
 3. **Deploy**:
    - Vercel automatically deploys on push to main
@@ -186,9 +188,11 @@ PostScholar uses Railway for backend hosting.
    - `CLIENT_URL` → Your Vercel URL (https://postscholar.org)
    - `ORCID_CLIENT_ID` → From ORCID developer console
    - `ORCID_CLIENT_SECRET` → From ORCID developer console
+   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` → From Google Cloud OAuth credentials
+   - `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` → From GitHub OAuth app settings
    - `NODE_ENV` → `production` (enables stricter rate limits)
    - `PORT` → 3000 (Railway sets this automatically)
-   - `RESEND_API_KEY` / `EMAIL_FROM` → when email domain is configured (see email setup plan)
+   - `RESEND_API_KEY` / `EMAIL_FROM` → For password reset and verification emails
 
 4. **Run migrations on Railway**:
 ```bash
@@ -209,7 +213,7 @@ Run in Railway Postgres → Query. Then sign out and back in on postscholar.org.
 ### ORCID Setup
 
 1. **Register application** at https://orcid.org/developer-tools
-2. **Set redirect URI** to `https://your-backend.railway.app/auth/orcid/callback`
+2. **Set redirect URI** to `{CLIENT_URL}/orcid/callback` (for example, `https://postscholar.org/orcid/callback`)
 3. **Add credentials** to environment variables
 
 ## Common Tasks
@@ -408,9 +412,18 @@ npm run build
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
 | `JWT_SECRET` | Secret key for JWT signing | `your-secret-key` |
 | `CLIENT_URL` | Frontend URL for CORS | `http://localhost:3001` |
+| `NODE_ENV` | Runtime environment; production enables stricter defaults | `production` |
 | `ORCID_CLIENT_ID` | ORCID OAuth client ID | From ORCID developer console |
 | `ORCID_CLIENT_SECRET` | ORCID OAuth client secret | From ORCID developer console |
-| `ORCID_REDIRECT_URI` | ORCID OAuth callback URL | `http://localhost:3000/auth/orcid/callback` |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | From Google Cloud |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | From Google Cloud |
+| `GITHUB_CLIENT_ID` | GitHub OAuth client ID | From GitHub developer settings |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth client secret | From GitHub developer settings |
+| `RESEND_API_KEY` | Resend API key for password reset and verification email | From Resend |
+| `EMAIL_FROM` | Sender for transactional email | `PostScholar <noreply@postscholar.org>` |
+| `SENTRY_DSN` | Optional Sentry DSN for error tracking | From Sentry |
+| `RATE_LIMIT_AUTH_MAX` | Optional auth rate limit override per 15 minutes | `10` |
+| `RATE_LIMIT_GENERAL_MAX` | Optional general rate limit override per 15 minutes | `100` |
 | `PORT` | Server port | `3000` |
 
 ### Client
@@ -418,6 +431,7 @@ npm run build
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `NEXT_PUBLIC_API_URL` | Backend API URL | `http://localhost:3000` |
+| `API_URL` | Optional server-side/proxy backend API URL | `http://localhost:3000` |
 
 ## Additional Resources
 

@@ -98,7 +98,15 @@ PostScholar follows a modern client-server architecture:
 
 Location: `server/db/migrations/*.sql`
 
-Migrations are numbered sequentially (001-019 currently) and tracked in `schema_migrations` table.
+Migrations are numbered sequentially (001-022 currently) and tracked in the `migrations` table.
+
+Recent social/auth/profile migrations:
+- `016_mentions.sql` / `020_mention_types.sql` — mention notifications and notification type metadata
+- `017_topic_follows.sql` — followed topics for feed personalization
+- `018_user_roles.sql` — moderator/admin roles
+- `019_comment_reactions.sql` — comment appreciation reactions
+- `021_oauth_and_verification.sql` — nullable local-auth fields, Google/GitHub IDs, email verification tokens
+- `022_display_name.sql` — optional display names separate from immutable usernames
 
 **Key patterns**:
 ```sql
@@ -174,6 +182,14 @@ OAuth users (Google, GitHub) and ORCID-linked users skip email verification.
 | ORCID verify | `GET /auth/orcid/url?discussion_id=` | Author badge flow (unchanged) |
 
 **Env vars**: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, plus existing ORCID and Resend vars.
+
+### Connected sign-in methods
+
+Settings uses `/users/me/connections` to manage linked providers:
+- `GET /users/me/connections` — returns password, Google, GitHub, and ORCID connection state
+- `GET /auth/google/link/url`, `GET /auth/github/link/url`, `GET /auth/orcid/link/url` — authenticated OAuth link flows
+- `POST /users/me/connections/password` — adds a password when the account already has an email
+- `DELETE /users/me/connections/:provider` — unlinks a provider only when another sign-in method remains
 
 ### Display name
 
@@ -314,13 +330,14 @@ src/
 │   ├── sitemap.js          # Dynamic sitemap
 │   ├── robots.js           # Crawler rules
 │   ├── explore/page.js     # Explore feed
-│   ├── profile/[username]/ # User profiles
+│   ├── u/[username]/       # User profiles
 │   └── settings/page.js    # Settings
 ├── components/
 │   ├── Nav.jsx             # Navigation bar
 │   ├── FeedCard.jsx        # Discussion card
 │   ├── Comment.jsx         # Comment component
 │   ├── PaperHeader.jsx     # Paper metadata display
+│   ├── LinkedAccounts.jsx  # Connected sign-in methods
 │   ├── ErrorBoundary.jsx   # Error boundary component
 │   ├── EmptyState.jsx      # Empty state component
 │   ├── Skeleton.jsx        # Loading skeletons
@@ -334,7 +351,7 @@ src/
 PostScholar uses **React Context** for global state:
 
 - `AuthContext`: Current user, login/logout functions
-- `SettingsContext`: User preferences (theme, etc.)
+- `ThemeContext`: Theme preference
 
 No Redux/Zustand - Context is sufficient for our needs.
 

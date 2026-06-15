@@ -77,6 +77,8 @@ npm test -- tests/papers.test.js
 |------|--------|
 | `auth.test.js` | Register, login, `/auth/me`, cookies |
 | `auth-verify.test.js` | Email verification gate, ORCID `/auth/complete`, OAuth URL 503 when unconfigured |
+| `connections.test.js` | Linked sign-in methods, unlink safeguards, OAuth link URL endpoints |
+| `oauth-users.test.js` | OAuth user creation/linking helpers and verified-email safeguards |
 | `social.test.js` | Follows, mentions, appreciation notifications, reports/moderation |
 | `papers.test.js` | Manual paper + discussion + comment flow |
 
@@ -112,6 +114,7 @@ After `npm run dev` (or with staging deployed), spot-check:
 5. **ORCID login** — “Continue with ORCID” → new user → `/auth/complete` for username
 6. **ORCID verify** — on a discussion, author verify still works (separate from login)
 7. **Google / GitHub** — only after OAuth env vars and redirect URIs are configured
+8. **Linked accounts** — Settings → Sign-in methods; connect/disconnect providers, confirming the last sign-in method cannot be removed
 
 ---
 
