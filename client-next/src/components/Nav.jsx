@@ -191,7 +191,21 @@ export default function Nav() {
           )}
         </div>
 
-        {user && <div className={styles.profileBar}>{profileMenu}</div>}
+        {user && (
+          <div className={styles.profileBar}>
+            <Link
+              href="/mentions"
+              className={`${styles.mentionsBtn} ${styles.mentionsBtnMobile}`}
+              aria-label="Mentions"
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className={styles.badge}>{unreadCount > 9 ? '9+' : unreadCount}</span>
+              )}
+            </Link>
+            {profileMenu}
+          </div>
+        )}
 
         <button
           className={styles.hamburger}

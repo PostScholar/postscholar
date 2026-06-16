@@ -40,11 +40,13 @@ describe('Email verification flow', () => {
 
     expect(res.status).toBe(201)
     expect(res.body.email_verified).toBe(false)
+    expect(res.body.needs_email_verification).toBe(true)
     cookie = res.headers['set-cookie'][0]
 
     const me = await request(app).get('/auth/me').set('Cookie', cookie)
     userId = me.body.id
     expect(me.body.email_verified).toBe(false)
+    expect(me.body.needs_email_verification).toBe(true)
   })
 
   it('blocks unverified user from posting comments', async () => {
@@ -70,6 +72,24 @@ describe('Email verification flow', () => {
     expect(res.body.code).toBe('EMAIL_UNVERIFIED')
   })
 
+  it('resend invalidates previous verification link', async () => {
+    const oldToken = crypto.randomBytes(32).toString('hex')
+    await pool.query(
+      `INSERT INTO email_verification_tokens (user_id, token_hash, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '1 hour')`,
+      [userId, hashToken(oldToken)]
+    )
+
+    const resend = await request(app)
+      .post('/auth/resend-verification')
+      .set('Cookie', cookie)
+    expect(resend.status).toBe(200)
+
+    const oldLink = await request(app).get(`/auth/verify-email?token=${oldToken}`)
+    expect(oldLink.status).toBe(400)
+    expect(oldLink.body.error).toBe('Invalid or expired verification token')
+  })
+
   it('allows posting after email verification', async () => {
     const rawToken = crypto.randomBytes(32).toString('hex')
     await pool.query(
@@ -88,6 +108,33 @@ describe('Email verification flow', () => {
 
     expect(res.status).toBe(201)
     expect(res.body.comment.body).toBe('Verified comment')
+  })
+
+  it('returns success when verifying with already-used token on verified user', async () => {
+    const usedToken = crypto.randomBytes(32).toString('hex')
+    const insert = await pool.query(
+      `INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, used_at)
+       VALUES ($1, $2, NOW() + INTERVAL '1 hour', NOW())
+       RETURNING id`,
+      [userId, hashToken(usedToken)]
+    )
+
+    const res = await request(app).get(`/auth/verify-email?token=${usedToken}`)
+    expect(res.status).toBe(200)
+    expect(res.body.message).toBe('Email already verified')
+
+    await pool.query('DELETE FROM email_verification_tokens WHERE id = $1', [insert.rows[0].id])
+  })
+
+  it('resend after verify returns already verified', async () => {
+    const res = await request(app)
+      .post('/auth/resend-verification')
+      .set('Cookie', cookie)
+    expect(res.status).toBe(200)
+    expect(res.body.message).toBe('Email already verified')
+
+    const me = await request(app).get('/auth/me').set('Cookie', cookie)
+    expect(me.body.needs_email_verification).toBe(false)
   })
 })
 

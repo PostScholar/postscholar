@@ -27,15 +27,25 @@ async function findAvailableUsername(base) {
   return `user_${Date.now().toString(36).slice(-8)}`
 }
 
+function needsEmailVerification(user) {
+  if (user.google_id || user.github_id || user.orcid_id) return false
+  return user.email_verified === false
+}
+
 function formatUserResponse(user) {
-  return {
+  const response = {
     id: user.id,
     username: user.username,
     email: user.email,
     display_name: user.display_name || null,
     role: user.role || 'user',
     email_verified: user.email_verified,
+    needs_email_verification: needsEmailVerification(user),
   }
+  if (user.created_at != null) {
+    response.created_at = user.created_at
+  }
+  return response
 }
 
 async function linkOAuthProvider(userId, provider, providerId, opts = {}) {
@@ -90,6 +100,7 @@ module.exports = {
   USERNAME_REGEX,
   sanitizeUsernameBase,
   findAvailableUsername,
+  needsEmailVerification,
   formatUserResponse,
   linkOAuthProvider,
 }

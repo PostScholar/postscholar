@@ -179,7 +179,7 @@ router.post('/callback', async (req, res) => {
 
 async function handleOrcidLogin(req, res, { orcidId, displayName }) {
   const existing = await pool.query(
-    `SELECT id, username, email, display_name, role, email_verified
+    `SELECT id, username, email, display_name, role, email_verified, orcid_id
      FROM users WHERE orcid_id = $1`,
     [orcidId]
   )

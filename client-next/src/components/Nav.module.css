@@ -328,6 +328,10 @@
   color: var(--text-primary);
 }
 
+.mentionsBtnMobile {
+  display: none;
+}
+
 .badge {
   position: absolute;
   top: 0;
@@ -383,6 +387,15 @@
     display: flex;
     order: 2;
     align-items: center;
+    gap: var(--space-2);
+  }
+
+  .mentionsBtnMobile {
+    display: flex;
+  }
+
+  .right .mentionsBtn {
+    display: none;
   }
 
   .hamburger {

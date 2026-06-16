@@ -78,7 +78,7 @@ async function issueVerificationToken(userId) {
   const expiresAt = new Date(Date.now() + VERIFY_TOKEN_EXPIRY_MS)
 
   await db.query(
-    'UPDATE email_verification_tokens SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL',
+    'DELETE FROM email_verification_tokens WHERE user_id = $1 AND used_at IS NULL',
     [userId]
   )
   await db.query(
@@ -180,12 +180,13 @@ router.post('/login', async (req, res) => {
 
 router.get('/me', authenticateToken, async (req, res) => {
   const result = await db.query(
-    `SELECT id, username, email, display_name, role, created_at, email_verified
+    `SELECT id, username, email, display_name, role, created_at, email_verified,
+            google_id, github_id, orcid_id
      FROM users WHERE id = $1`,
     [req.user.userId]
   )
   if (!result.rows[0]) return res.status(404).json({ error: 'User not found' })
-  res.json(result.rows[0])
+  res.json(formatUserResponse(result.rows[0]))
 })
 
 router.post('/logout', (req, res) => {
@@ -212,7 +213,16 @@ router.get('/verify-email', async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired verification token' })
     }
     if (verifyToken.used_at) {
-      return res.status(400).json({ error: 'Verification token has already been used' })
+      const userResult = await db.query(
+        'SELECT email_verified FROM users WHERE id = $1',
+        [verifyToken.user_id]
+      )
+      if (userResult.rows[0]?.email_verified) {
+        return res.json({ message: 'Email already verified' })
+      }
+      return res.status(400).json({
+        error: 'This verification link is no longer valid. Request a new one.',
+      })
     }
     if (new Date() > new Date(verifyToken.expires_at)) {
       return res.status(400).json({ error: 'Verification token has expired' })
@@ -307,7 +317,7 @@ router.post('/complete', async (req, res) => {
     const result = await db.query(
       `INSERT INTO users (username, email, orcid_id, display_name, email_verified)
        VALUES ($1, $2, $3, $4, true)
-       RETURNING id, username, email, display_name, role, email_verified`,
+       RETURNING id, username, email, display_name, role, email_verified, orcid_id`,
       [
         username,
         payload.email || null,

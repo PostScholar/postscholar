@@ -1,14 +1,30 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { getApiUrl } from '@/lib/config'
 import styles from './VerifyEmailBanner.module.css'
 
-export default function VerifyEmailBanner() {
-  const { user } = useAuth()
+function userNeedsVerification(user) {
+  if (!user) return false
+  if (user.needs_email_verification != null) {
+    return user.needs_email_verification
+  }
+  return user.email_verified === false
+}
 
-  if (!user || user.email_verified !== false) return null
+export default function VerifyEmailBanner() {
+  const { user, refreshUser } = useAuth()
+  const didRefresh = useRef(false)
+
+  useEffect(() => {
+    if (!userNeedsVerification(user) || didRefresh.current) return
+    didRefresh.current = true
+    refreshUser()
+  }, [user, refreshUser])
+
+  if (!user || !userNeedsVerification(user)) return null
 
   async function handleResend() {
     try {
