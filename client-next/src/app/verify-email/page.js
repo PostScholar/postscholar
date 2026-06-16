@@ -8,6 +8,14 @@ import { getApiUrl } from '@/lib/config'
 import Logo from '@/components/Logo'
 import styles from '../login/Auth.module.css'
 
+function userNeedsVerification(user) {
+  if (!user) return true
+  if (user.needs_email_verification != null) {
+    return user.needs_email_verification
+  }
+  return user.email_verified === false
+}
+
 function VerifyEmailInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -18,6 +26,15 @@ function VerifyEmailInner() {
 
   const token = searchParams.get('token')
   const justSent = searchParams.get('sent') === '1'
+
+  useEffect(() => {
+    if (token || !user) return
+    if (!userNeedsVerification(user)) {
+      setStatus('success')
+      setMessage('Your email is already verified.')
+      setTimeout(() => router.push('/'), 2000)
+    }
+  }, [token, user, router])
 
   useEffect(() => {
     if (!token) return
@@ -32,7 +49,11 @@ function VerifyEmailInner() {
           return
         }
         setStatus('success')
-        setMessage('Your email is verified. You can now post comments and start discussions.')
+        setMessage(
+          data.message === 'Email already verified'
+            ? 'Your email is already verified.'
+            : 'Your email is verified. You can now post comments and start discussions.'
+        )
         await refreshUser()
         setTimeout(() => router.push('/'), 3000)
       } catch {
@@ -71,6 +92,23 @@ function VerifyEmailInner() {
             {status === 'pending' && <p className={styles.subtitle}>Verifying…</p>}
             {status === 'success' && <p className={styles.successBox}>{message}</p>}
             {status === 'error' && <p className={styles.error}>{message}</p>}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (user && !userNeedsVerification(user)) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.formPanel} style={{ width: '100%' }}>
+          <div className={styles.card}>
+            <Logo variant="full" href="/" className={styles.mobileLogo} />
+            <h1 className={styles.title}>Verify email</h1>
+            <p className={styles.successBox}>Your email is already verified.</p>
+            <p className={styles.switchLink}>
+              <Link href="/">Continue browsing</Link>
+            </p>
           </div>
         </div>
       </div>

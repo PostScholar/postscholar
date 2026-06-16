@@ -230,6 +230,30 @@ export default function ExploreFeed({
               </button>
             ))}
             </div>
+            {topics.length > 0 && (
+              <>
+                <p className={styles.mobileTopicsLabel}>Topics</p>
+                <div className={styles.mobileTopicChips}>
+                  <button
+                    type="button"
+                    className={`${styles.mobileTopicChip} ${!activeTopic ? styles.mobileTopicChipActive : ''}`}
+                    onClick={() => handleTopicChange('')}
+                  >
+                    All topics
+                  </button>
+                  {topics.slice(0, 12).map(topic => (
+                    <button
+                      key={topic.slug}
+                      type="button"
+                      className={`${styles.mobileTopicChip} ${activeTopic === topic.slug ? styles.mobileTopicChipActive : ''}`}
+                      onClick={() => handleTopicChange(topic.slug)}
+                    >
+                      {topic.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
           {activeFilter !== 'Following' && activeFilter !== 'Bookmarks' && (
             <div className={styles.dropdowns}>
@@ -284,7 +308,9 @@ export default function ExploreFeed({
         )}
       </main>
 
-      <SuggestedAuthors />
+      <div className={styles.suggestedAside}>
+        <SuggestedAuthors />
+      </div>
     </div>
   )
 }

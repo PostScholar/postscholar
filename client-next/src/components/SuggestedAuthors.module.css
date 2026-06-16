@@ -102,6 +102,12 @@
 
 @media (max-width: 1000px) {
   .sidebar {
-    display: none;
+    position: static;
+    height: auto;
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-top: var(--space-6);
+    margin-top: var(--space-2);
   }
 }

@@ -20,7 +20,19 @@ import styles from './Start.module.css'
  * This ensures a discussion is only created when the user commits.
  */
 
-const EMPTY_MANUAL = { title: '', authors: '', journal: '', year: '', abstract: '' }
+const EMPTY_MANUAL = { doi: '', title: '', authors: '', journal: '', year: '', abstract: '', paper_url: '' }
+
+const MANUAL_STATUSES = new Set(['not_found', 'lookup_failed', 'manual'])
+
+function manualBannerMessage(status) {
+  if (status === 'lookup_failed') {
+    return 'CrossRef is unavailable — enter the paper details manually.'
+  }
+  if (status === 'not_found') {
+    return "This DOI wasn't found on CrossRef. Enter the paper details manually."
+  }
+  return 'Enter the paper details to start a discussion.'
+}
 
 function TopicPicker({ allTopics, selectedTopicIds, toggleTopic }) {
   return (
@@ -124,6 +136,27 @@ export default function Start() {
     )
   }
 
+  function openManualForm(prefillDoi = true) {
+    setManual(prev => ({
+      ...EMPTY_MANUAL,
+      doi: prefillDoi ? doi.trim() : '',
+    }))
+    setStatus('manual')
+    setErrorMsg('')
+    setPaper(null)
+  }
+
+  function resetToIdle() {
+    setStatus('idle')
+    setPaper(null)
+    setDoi('')
+    setManual(EMPTY_MANUAL)
+    setOpeningComment('')
+    setSelectedTopicIds([])
+    setCustomTagInput('')
+    setErrorMsg('')
+  }
+
   async function handleLookup(e) {
     e.preventDefault()
     if (!doi.trim()) return
@@ -143,7 +176,11 @@ export default function Start() {
       const data = await res.json()
 
       if (!res.ok) { setStatus('error'); setErrorMsg(data.error || 'Something went wrong'); return }
-      if (!data.found) { setStatus('not_found'); return }
+      if (!data.found) {
+        setManual(prev => ({ ...EMPTY_MANUAL, doi: doi.trim() }))
+        setStatus(data.lookup_failed ? 'lookup_failed' : 'not_found')
+        return
+      }
 
       // If a discussion already exists for this paper, redirect immediately
       if (data.existed && data.discussion_id) {
@@ -214,7 +251,9 @@ export default function Start() {
           authors: manual.authors,
           journal: manual.journal,
           year: manual.year ? parseInt(manual.year) : null,
-          abstract: manual.abstract
+          abstract: manual.abstract,
+          doi: manual.doi?.trim() || null,
+          paper_url: manual.paper_url?.trim() || null,
         })
       })
       const paperData = await paperRes.json()
@@ -256,6 +295,9 @@ export default function Start() {
     return authors_json.map(a => [a.given, a.family].filter(Boolean).join(' ')).join(', ')
   }
 
+  const showManualForm = MANUAL_STATUSES.has(status)
+  const doiFormDisabled = status === 'loading' || status === 'found'
+
   return (
     <Layout>
       <div className={styles.page}>
@@ -278,7 +320,7 @@ export default function Start() {
               placeholder="e.g. 10.1145/3290605.3300651"
               value={doi}
               onChange={e => setDoi(e.target.value)}
-              disabled={status === 'loading' || status === 'found'}
+              disabled={doiFormDisabled}
             />
             <button
               type="submit"
@@ -291,9 +333,16 @@ export default function Start() {
           <p className={styles.hint}>
             Example: <code className={styles.code}>10.1038/nature14539</code>
           </p>
+          {!showManualForm && status !== 'found' && (
+            <p className={styles.hint}>
+              <button type="button" className={styles.manualLink} onClick={() => openManualForm(false)}>
+                Paper not on CrossRef? Enter details manually
+              </button>
+            </p>
+          )}
         </form>
 
-        {status === 'error' && <p className={styles.error}>{errorMsg}</p>}
+        {status === 'error' && !showManualForm && <p className={styles.error}>{errorMsg}</p>}
 
         {/* Found — paper preview + tagging */}
         {status === 'found' && paper && (
@@ -337,8 +386,7 @@ export default function Start() {
             {errorMsg && <p className={styles.error}>{errorMsg}</p>}
 
             <div className={styles.formFooter}>
-              <button type="button" className={styles.cancelBtn}
-                onClick={() => { setStatus('idle'); setPaper(null); setDoi('') }}>
+              <button type="button" className={styles.cancelBtn} onClick={resetToIdle}>
                 Start over
               </button>
               <button type="submit" className={styles.submitBtn} disabled={submitting}>
@@ -348,11 +396,34 @@ export default function Start() {
           </form>
         )}
 
-        {/* Not found — manual entry */}
-        {status === 'not_found' && (
+        {/* Manual entry — not found, lookup failed, or user chose manual */}
+        {showManualForm && (
           <form className={styles.manualForm} onSubmit={handleSubmitManual}>
             <div className={styles.notFoundBanner}>
-              This DOI wasn't found on CrossRef. Enter the paper details manually.
+              {manualBannerMessage(status)}
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>DOI <span className={styles.optional}>(optional)</span></label>
+              <input
+                className={styles.input}
+                type="text"
+                placeholder="e.g. 10.1038/nature14539"
+                value={manual.doi}
+                onChange={e => setManual(m => ({ ...m, doi: e.target.value }))}
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.label}>Paper link <span className={styles.optional}>(optional)</span></label>
+              <input
+                className={styles.input}
+                type="url"
+                placeholder="https://arxiv.org/abs/..."
+                value={manual.paper_url}
+                onChange={e => setManual(m => ({ ...m, paper_url: e.target.value }))}
+              />
+              <p className={styles.hint}>arXiv, publisher page, or PDF link</p>
             </div>
 
             <div className={styles.field}>
@@ -408,8 +479,7 @@ export default function Start() {
             {errorMsg && <p className={styles.error}>{errorMsg}</p>}
 
             <div className={styles.formFooter}>
-              <button type="button" className={styles.cancelBtn}
-                onClick={() => { setStatus('idle'); setDoi('') }}>Back</button>
+              <button type="button" className={styles.cancelBtn} onClick={resetToIdle}>Back</button>
               <button type="submit" className={styles.submitBtn} disabled={submitting}>
                 {submitting ? 'Creating...' : 'Start discussion'}
               </button>

@@ -100,7 +100,9 @@ router.post('/lookup', authenticateToken, async (req, res) => {
     })
 
     if (crossrefRes.status === 404) return res.json({ found: false })
-    if (!crossrefRes.ok) return res.status(502).json({ error: 'CrossRef request failed' })
+    if (!crossrefRes.ok) {
+      return res.json({ found: false, lookup_failed: true })
+    }
 
     const crossrefData = await crossrefRes.json()
     const work = crossrefData?.message
@@ -180,10 +182,29 @@ router.get('/*doi', optionalAuth, async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/manual', authenticateToken, async (req, res) => {
   try {
-    const { title, authors, journal, year, abstract } = req.body
+    const { title, authors, journal, year, abstract, doi, paper_url } = req.body
 
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
       return res.status(400).json({ error: 'title is required' })
+    }
+
+    let normalizedDoi = null
+    if (doi && typeof doi === 'string' && doi.trim()) {
+      normalizedDoi = doi.trim().toLowerCase()
+    }
+
+    let normalizedUrl = null
+    if (paper_url && typeof paper_url === 'string' && paper_url.trim()) {
+      normalizedUrl = paper_url.trim()
+      try {
+        // Validate URL format when provided
+        const parsed = new URL(normalizedUrl)
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+          return res.status(400).json({ error: 'paper_url must be a valid URL' })
+        }
+      } catch {
+        return res.status(400).json({ error: 'paper_url must be a valid URL' })
+      }
     }
 
     // Parse authors string "Jane Smith, John Doe" into authors_json array
@@ -197,16 +218,17 @@ router.post('/manual', authenticateToken, async (req, res) => {
       : []
 
     const result = await pool.query(
-      `INSERT INTO papers (doi, title, authors_json, journal, year, abstract, source)
-       VALUES ($1, $2, $3, $4, $5, $6, 'manual')
+      `INSERT INTO papers (doi, title, authors_json, journal, year, abstract, paper_url, source)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'manual')
        RETURNING *`,
       [
-        null, // no DOI for manual entries
+        normalizedDoi,
         title.trim(),
         JSON.stringify(authors_json),
         journal?.trim() || null,
         year ? parseInt(year) : null,
-        abstract?.trim() || null
+        abstract?.trim() || null,
+        normalizedUrl,
       ]
     )
 

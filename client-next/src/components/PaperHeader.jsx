@@ -222,6 +222,22 @@ export default function PaperHeader({
             </dd>
           </div>
         )}
+        {paper.paper_url && (
+          <div className={styles.metaRow}>
+            <dt className={styles.metaLabel}>Paper link</dt>
+            <dd className={styles.metaValue}>
+              <a
+                href={paper.paper_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.doiLink}
+              >
+                View paper
+                <ExternalLink size={12} className={styles.externalIcon} aria-hidden />
+              </a>
+            </dd>
+          </div>
+        )}
       </dl>
 
       {customTags.length > 0 && (

@@ -144,7 +144,7 @@ async function findOrCreateOAuthUser({
   const idColumn = provider === 'google' ? 'google_id' : 'github_id'
 
   const byProvider = await db.query(
-    `SELECT id, username, email, display_name, role, email_verified
+    `SELECT id, username, email, display_name, role, email_verified, google_id, github_id, orcid_id
      FROM users WHERE ${idColumn} = $1`,
     [providerId]
   )
@@ -167,7 +167,8 @@ async function findOrCreateOAuthUser({
         [providerId, emailVerified, displayName || null, existing.id]
       )
       const updated = await db.query(
-        `SELECT id, username, email, display_name, role, email_verified FROM users WHERE id = $1`,
+        `SELECT id, username, email, display_name, role, email_verified, google_id, github_id, orcid_id
+         FROM users WHERE id = $1`,
         [existing.id]
       )
       return updated.rows[0]
@@ -178,7 +179,7 @@ async function findOrCreateOAuthUser({
   const result = await db.query(
     `INSERT INTO users (username, email, ${idColumn}, display_name, email_verified)
      VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, username, email, display_name, role, email_verified`,
+     RETURNING id, username, email, display_name, role, email_verified, google_id, github_id, orcid_id`,
     [username, email || null, providerId, displayName || null, emailVerified]
   )
   return result.rows[0]

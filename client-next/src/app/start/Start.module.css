@@ -359,6 +359,21 @@
   padding: 2px var(--space-2);
 }
 
+.manualLink {
+  font-size: var(--text-sm);
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.manualLink:hover {
+  color: var(--accent-hover);
+}
+
 @media (max-width: 480px) {
   .doiRow { flex-direction: column; }
   .twoCol { grid-template-columns: 1fr; }
