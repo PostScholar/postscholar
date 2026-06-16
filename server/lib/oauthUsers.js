@@ -38,6 +38,10 @@ function formatUserResponse(user) {
   }
 }
 
+function normalizeEmail(email) {
+  return (email || '').trim().toLowerCase()
+}
+
 async function linkOAuthProvider(userId, provider, providerId, opts = {}) {
   const pool = require('../db')
   const idColumn = provider === 'google' ? 'google_id' : 'github_id'
@@ -53,13 +57,39 @@ async function linkOAuthProvider(userId, provider, providerId, opts = {}) {
   }
 
   const current = await pool.query(
-    `SELECT google_id, github_id FROM users WHERE id = $1`,
+    `SELECT email, google_id, github_id FROM users WHERE id = $1`,
     [userId]
   )
-  if (current.rows[0]?.[idColumn]) {
+  const user = current.rows[0]
+  if (!user) {
+    const err = new Error('User not found')
+    err.code = 'USER_NOT_FOUND'
+    throw err
+  }
+  if (user[idColumn]) {
     const err = new Error('Provider already linked to your account')
     err.code = 'ALREADY_LINKED'
     throw err
+  }
+
+  if (user.email) {
+    const providerEmail = normalizeEmail(opts.email)
+    const accountEmail = normalizeEmail(user.email)
+    if (!opts.emailVerified || !providerEmail || providerEmail !== accountEmail) {
+      const err = new Error('Provider email must be verified and match your PostScholar account email')
+      err.code = 'PROVIDER_EMAIL_MISMATCH'
+      throw err
+    }
+  } else if (opts.email && opts.emailVerified) {
+    const emailTaken = await pool.query(
+      'SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2',
+      [opts.email, userId]
+    )
+    if (emailTaken.rows.length > 0) {
+      const err = new Error('This email is already used by another PostScholar account')
+      err.code = 'EMAIL_TAKEN'
+      throw err
+    }
   }
 
   const updates = [`${idColumn} = $1`]

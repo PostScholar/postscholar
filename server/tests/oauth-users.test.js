@@ -4,6 +4,7 @@ jest.mock('../db', () => ({
 
 const db = require('../db')
 const { findOrCreateOAuthUser } = require('../routes/google')
+const { linkOAuthProvider } = require('../lib/oauthUsers')
 
 beforeEach(() => {
   db.query.mockReset()
@@ -114,5 +115,102 @@ describe('findOrCreateOAuthUser', () => {
     })
 
     expect(db.query).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('linkOAuthProvider', () => {
+  it('rejects linking a provider with a different verified email', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          email: 'victim@example.com',
+          google_id: null,
+          github_id: null,
+        }],
+      })
+
+    await expect(linkOAuthProvider('user-1', 'google', 'google-attacker', {
+      email: 'attacker@example.com',
+      emailVerified: true,
+      displayName: 'Attacker',
+    })).rejects.toMatchObject({
+      code: 'PROVIDER_EMAIL_MISMATCH',
+    })
+
+    expect(db.query).toHaveBeenCalledTimes(2)
+  })
+
+  it('rejects linking a provider when the matching email is not verified by the provider', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          email: 'victim@example.com',
+          google_id: null,
+          github_id: null,
+        }],
+      })
+
+    await expect(linkOAuthProvider('user-1', 'google', 'google-unverified', {
+      email: 'victim@example.com',
+      emailVerified: false,
+      displayName: 'Victim',
+    })).rejects.toMatchObject({
+      code: 'PROVIDER_EMAIL_MISMATCH',
+    })
+
+    expect(db.query).toHaveBeenCalledTimes(2)
+  })
+
+  it('links a provider when the verified provider email matches the account email', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          email: 'Victim@Example.com',
+          google_id: null,
+          github_id: null,
+        }],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+
+    await linkOAuthProvider('user-1', 'google', 'google-victim', {
+      email: 'victim@example.com',
+      emailVerified: true,
+      displayName: 'Victim',
+    })
+
+    expect(db.query).toHaveBeenCalledTimes(3)
+    expect(db.query.mock.calls[2][1]).toEqual([
+      'google-victim',
+      'victim@example.com',
+      true,
+      'Victim',
+      'user-1',
+    ])
+  })
+
+  it('rejects assigning a provider email already used by another account', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          email: null,
+          google_id: null,
+          github_id: null,
+        }],
+      })
+      .mockResolvedValueOnce({ rows: [{ id: 'user-2' }] })
+
+    await expect(linkOAuthProvider('user-1', 'github', 'github-user', {
+      email: 'taken@example.com',
+      emailVerified: true,
+      displayName: 'GitHub User',
+    })).rejects.toMatchObject({
+      code: 'EMAIL_TAKEN',
+    })
+
+    expect(db.query).toHaveBeenCalledTimes(3)
   })
 })
