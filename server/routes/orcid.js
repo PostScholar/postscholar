@@ -59,6 +59,14 @@ function buildOrcidAuthUrl(state) {
   return `${ORCID_AUTH_URL}?${params.toString()}`
 }
 
+async function findOrcidOwnerConflict(orcidId, userId) {
+  const taken = await pool.query(
+    'SELECT id FROM users WHERE orcid_id = $1 AND id != $2',
+    [orcidId, userId]
+  )
+  return taken.rows[0] || null
+}
+
 async function exchangeOrcidCode(code) {
   const tokenRes = await fetch(ORCID_TOKEN_URL, {
     method: 'POST',
@@ -223,11 +231,8 @@ async function handleOrcidLink(req, res, { statePayload, orcidId, displayName })
     return res.status(403).json({ error: 'State mismatch' })
   }
 
-  const taken = await pool.query(
-    'SELECT id FROM users WHERE orcid_id = $1 AND id != $2',
-    [orcidId, decoded.userId]
-  )
-  if (taken.rows.length > 0) {
+  const taken = await findOrcidOwnerConflict(orcidId, decoded.userId)
+  if (taken) {
     return res.status(409).json({
       error: 'This ORCID iD is already linked to another PostScholar account',
     })
@@ -302,6 +307,13 @@ async function handleOrcidVerify(req, res, { statePayload, orcidId, orcidGiven, 
     })
   }
 
+  const taken = await findOrcidOwnerConflict(orcidId, decoded.userId)
+  if (taken) {
+    return res.status(409).json({
+      error: 'This ORCID iD is already linked to another PostScholar account',
+    })
+  }
+
   await pool.query(
     'UPDATE users SET orcid_id = COALESCE(orcid_id, $1) WHERE id = $2',
     [orcidId, decoded.userId]
@@ -317,3 +329,4 @@ async function handleOrcidVerify(req, res, { statePayload, orcidId, orcidGiven, 
 }
 
 module.exports = router
+module.exports.findOrcidOwnerConflict = findOrcidOwnerConflict

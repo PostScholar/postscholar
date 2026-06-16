@@ -148,7 +148,7 @@ router.post('/callback', async (req, res) => {
           displayName: githubData.displayName,
         })
       } catch (err) {
-        const status = err.code === 'PROVIDER_TAKEN' ? 409 : 400
+        const status = ['PROVIDER_TAKEN', 'EMAIL_TAKEN'].includes(err.code) ? 409 : 400
         return res.status(status).json({ error: err.message })
       }
       return res.json({ linked: true, provider: 'github', mode: 'link' })

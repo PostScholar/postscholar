@@ -106,11 +106,11 @@ router.post('/callback', async (req, res) => {
       try {
         await linkOAuthProvider(userId, 'google', profile.id, {
           email: profile.email,
-          emailVerified: profile.verified_email !== false,
+          emailVerified: profile.verified_email === true,
           displayName: profile.name,
         })
       } catch (err) {
-        const status = err.code === 'PROVIDER_TAKEN' ? 409 : 400
+        const status = ['PROVIDER_TAKEN', 'EMAIL_TAKEN'].includes(err.code) ? 409 : 400
         return res.status(status).json({ error: err.message })
       }
       return res.json({ linked: true, provider: 'google', mode: 'link' })
