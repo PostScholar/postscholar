@@ -4,6 +4,7 @@ jest.mock('../db', () => ({
 
 const db = require('../db')
 const { findOrCreateOAuthUser } = require('../routes/google')
+const { linkOAuthProvider } = require('../lib/oauthUsers')
 
 beforeEach(() => {
   db.query.mockReset()
@@ -114,5 +115,57 @@ describe('findOrCreateOAuthUser', () => {
     })
 
     expect(db.query).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('linkOAuthProvider', () => {
+  it('only marks email verified when the provider email matches the account email', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ google_id: null, github_id: null }] })
+      .mockResolvedValueOnce({ rows: [] })
+
+    await linkOAuthProvider('user-4', 'google', 'google-provider-4', {
+      email: 'provider@example.com',
+      emailVerified: true,
+      displayName: 'Provider User',
+    })
+
+    expect(db.query).toHaveBeenCalledTimes(3)
+    const [sql, values] = db.query.mock.calls[2]
+    expect(sql).toContain('email = COALESCE(email, $2)')
+    expect(sql).toContain('email IS NULL OR lower(email) = lower($3)')
+    expect(sql).toContain('WHERE id = $5')
+    expect(values).toEqual([
+      'google-provider-4',
+      'provider@example.com',
+      'provider@example.com',
+      'Provider User',
+      'user-4',
+    ])
+  })
+
+  it('does not mark email verified when the provider email is unverified', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ google_id: null, github_id: null }] })
+      .mockResolvedValueOnce({ rows: [] })
+
+    await linkOAuthProvider('user-5', 'google', 'google-provider-5', {
+      email: 'provider-unverified@example.com',
+      emailVerified: false,
+      displayName: 'Provider User',
+    })
+
+    expect(db.query).toHaveBeenCalledTimes(3)
+    const [sql, values] = db.query.mock.calls[2]
+    expect(sql).not.toContain('email_verified')
+    expect(sql).toContain('WHERE id = $4')
+    expect(values).toEqual([
+      'google-provider-5',
+      'provider-unverified@example.com',
+      'Provider User',
+      'user-5',
+    ])
   })
 })
