@@ -80,9 +80,14 @@ async function linkOAuthProvider(userId, provider, providerId, opts = {}) {
     updates.push(`email = COALESCE(email, $${param++})`)
     values.push(opts.email)
   }
-  if (opts.emailVerified) {
-    updates.push(`email_verified = CASE WHEN $${param++} THEN true ELSE email_verified END`)
-    values.push(true)
+  if (opts.emailVerified && opts.email) {
+    updates.push(
+      `email_verified = CASE
+         WHEN email IS NULL OR lower(email) = lower($${param++}) THEN true
+         ELSE email_verified
+       END`
+    )
+    values.push(opts.email)
   }
   if (opts.displayName) {
     updates.push(`display_name = COALESCE(display_name, $${param++})`)
