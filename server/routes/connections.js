@@ -12,6 +12,12 @@ const router = express.Router()
 const BCRYPT_COST = 12
 
 const AUTH_FIELDS = `id, email, password_hash, google_id, github_id, orcid_id, email_verified`
+const COLUMN_MAP = {
+  password: 'password_hash',
+  google: 'google_id',
+  github: 'github_id',
+  orcid: 'orcid_id',
+}
 
 async function getAuthUser(userId) {
   const result = await pool.query(
@@ -83,19 +89,29 @@ router.delete('/:provider', authenticateToken, async (req, res) => {
       })
     }
 
-    const columnMap = {
-      password: 'password_hash',
-      google: 'google_id',
-      github: 'github_id',
-      orcid: 'orcid_id',
-    }
-
-    await pool.query(
-      `UPDATE users SET ${columnMap[provider]} = NULL WHERE id = $1`,
+    const column = COLUMN_MAP[provider]
+    const otherMethodPredicate = Object.values(COLUMN_MAP)
+      .filter(authColumn => authColumn !== column)
+      .map(authColumn => `${authColumn} IS NOT NULL`)
+      .join(' OR ')
+    const updatedResult = await pool.query(
+      `UPDATE users
+       SET ${column} = NULL
+       WHERE id = $1
+         AND ${column} IS NOT NULL
+         AND (${otherMethodPredicate})
+       RETURNING ${AUTH_FIELDS}`,
       [req.user.userId]
     )
 
-    const updated = await getAuthUser(req.user.userId)
+    const updated = updatedResult.rows[0]
+    if (!updated) {
+      return res.status(400).json({
+        error: 'Add another sign-in method before removing this one',
+        code: 'LAST_SIGN_IN_METHOD',
+      })
+    }
+
     res.json(buildConnectionsResponse(updated))
   } catch (err) {
     console.error('DELETE /users/me/connections/:provider error:', err)

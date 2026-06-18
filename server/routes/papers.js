@@ -42,6 +42,29 @@ function normalizeCrossRef(work) {
   return { title, authors, journal, year, abstract }
 }
 
+async function fetchCrossRefPaper(doi) {
+  try {
+    const crossrefUrl = `https://api.crossref.org/works/${encodeURIComponent(doi)}`
+    const crossrefRes = await fetch(crossrefUrl, {
+      headers: { 'User-Agent': 'PostScholar/1.0 (mailto:hello@postscholar.org)' }
+    })
+
+    if (crossrefRes.status === 404) return { found: false }
+    if (!crossrefRes.ok) return { found: false, lookupFailed: true }
+
+    const crossrefData = await crossrefRes.json()
+    const work = crossrefData?.message
+    if (!work) return { found: false }
+
+    const paper = normalizeCrossRef(work)
+    if (!paper.title) return { found: false }
+
+    return { found: true, paper }
+  } catch {
+    return { found: false, lookupFailed: true }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // POST /papers/lookup
 // ---------------------------------------------------------------------------
@@ -94,22 +117,15 @@ router.post('/lookup', authenticateToken, async (req, res) => {
     }
 
     // Fetch from CrossRef — server-side only
-    const crossrefUrl = `https://api.crossref.org/works/${encodeURIComponent(doi)}`
-    const crossrefRes = await fetch(crossrefUrl, {
-      headers: { 'User-Agent': 'PostScholar/1.0 (mailto:hello@postscholar.org)' }
-    })
-
-    if (crossrefRes.status === 404) return res.json({ found: false })
-    if (!crossrefRes.ok) {
-      return res.json({ found: false, lookup_failed: true })
+    const crossrefPaper = await fetchCrossRefPaper(doi)
+    if (!crossrefPaper.found) {
+      return res.json({
+        found: false,
+        ...(crossrefPaper.lookupFailed ? { lookup_failed: true } : {}),
+      })
     }
 
-    const crossrefData = await crossrefRes.json()
-    const work = crossrefData?.message
-    if (!work) return res.json({ found: false })
-
-    const { title, authors, journal, year, abstract } = normalizeCrossRef(work)
-    if (!title) return res.json({ found: false })
+    const { title, authors, journal, year, abstract } = crossrefPaper.paper
 
     // Store the paper (no discussion created yet)
     const paperResult = await pool.query(
@@ -193,6 +209,33 @@ router.post('/manual', authenticateToken, async (req, res) => {
       normalizedDoi = doi.trim().toLowerCase()
     }
 
+    if (normalizedDoi) {
+      const existingPaper = await pool.query(
+        'SELECT id FROM papers WHERE doi = $1',
+        [normalizedDoi]
+      )
+      if (existingPaper.rows.length > 0) {
+        return res.status(409).json({
+          error: 'A paper with this DOI already exists',
+          code: 'DOI_ALREADY_EXISTS',
+        })
+      }
+
+      const crossrefPaper = await fetchCrossRefPaper(normalizedDoi)
+      if (crossrefPaper.found) {
+        return res.status(409).json({
+          error: 'This DOI exists on CrossRef. Use DOI lookup instead.',
+          code: 'DOI_FOUND_ON_CROSSREF',
+        })
+      }
+      if (crossrefPaper.lookupFailed) {
+        return res.status(503).json({
+          error: 'Could not verify DOI with CrossRef. Try again or remove the DOI to add a manual paper.',
+          code: 'DOI_VERIFICATION_FAILED',
+        })
+      }
+    }
+
     let normalizedUrl = null
     if (paper_url && typeof paper_url === 'string' && paper_url.trim()) {
       normalizedUrl = paper_url.trim()
@@ -240,3 +283,4 @@ router.post('/manual', authenticateToken, async (req, res) => {
 })
 
 module.exports = router
+module.exports.fetchCrossRefPaper = fetchCrossRefPaper

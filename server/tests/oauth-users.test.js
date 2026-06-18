@@ -4,6 +4,7 @@ jest.mock('../db', () => ({
 
 const db = require('../db')
 const { findOrCreateOAuthUser } = require('../routes/google')
+const { linkOAuthProvider } = require('../lib/oauthUsers')
 
 beforeEach(() => {
   db.query.mockReset()
@@ -114,5 +115,49 @@ describe('findOrCreateOAuthUser', () => {
     })
 
     expect(db.query).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('linkOAuthProvider', () => {
+  it('only verifies the stored email when the provider email matches or fills it', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ google_id: null, github_id: null }] })
+      .mockResolvedValueOnce({ rows: [] })
+
+    await linkOAuthProvider('user-1', 'google', 'google-1', {
+      email: 'provider@example.com',
+      emailVerified: true,
+      displayName: 'Provider User',
+    })
+
+    expect(db.query).toHaveBeenCalledTimes(3)
+    const [sql, values] = db.query.mock.calls[2]
+    expect(sql).toContain('email_verified = CASE')
+    expect(sql).toContain('email IS NULL OR LOWER(email) = LOWER($2)')
+    expect(sql).not.toContain('WHEN $')
+    expect(values).toEqual([
+      'google-1',
+      'provider@example.com',
+      'Provider User',
+      'user-1',
+    ])
+  })
+
+  it('does not mark email verified when the provider email is unverified', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ google_id: null, github_id: null }] })
+      .mockResolvedValueOnce({ rows: [] })
+
+    await linkOAuthProvider('user-1', 'google', 'google-1', {
+      email: 'provider@example.com',
+      emailVerified: false,
+    })
+
+    expect(db.query).toHaveBeenCalledTimes(3)
+    const [sql, values] = db.query.mock.calls[2]
+    expect(sql).not.toContain('email_verified')
+    expect(values).toEqual(['google-1', 'provider@example.com', 'user-1'])
   })
 })
