@@ -67,36 +67,56 @@ router.post('/password', authenticateToken, async (req, res) => {
 })
 
 router.delete('/:provider', authenticateToken, async (req, res) => {
+  const columnMap = {
+    password: 'password_hash',
+    google: 'google_id',
+    github: 'github_id',
+    orcid: 'orcid_id',
+  }
+
   try {
     const { provider } = req.params
     if (!PROVIDERS.includes(provider)) {
       return res.status(400).json({ error: 'Invalid provider' })
     }
 
-    const user = await getAuthUser(req.user.userId)
-    if (!user) return res.status(404).json({ error: 'User not found' })
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
 
-    if (!canUnlinkProvider(user, provider)) {
-      return res.status(400).json({
-        error: 'Add another sign-in method before removing this one',
-        code: 'LAST_SIGN_IN_METHOD',
-      })
+      const result = await client.query(
+        `SELECT ${AUTH_FIELDS} FROM users WHERE id = $1 FOR UPDATE`,
+        [req.user.userId]
+      )
+      const user = result.rows[0] || null
+
+      if (!user) {
+        await client.query('ROLLBACK')
+        return res.status(404).json({ error: 'User not found' })
+      }
+
+      if (!canUnlinkProvider(user, provider)) {
+        await client.query('ROLLBACK')
+        return res.status(400).json({
+          error: 'Add another sign-in method before removing this one',
+          code: 'LAST_SIGN_IN_METHOD',
+        })
+      }
+
+      const updatedResult = await client.query(
+        `UPDATE users SET ${columnMap[provider]} = NULL WHERE id = $1 RETURNING ${AUTH_FIELDS}`,
+        [req.user.userId]
+      )
+
+      await client.query('COMMIT')
+
+      res.json(buildConnectionsResponse(updatedResult.rows[0]))
+    } catch (err) {
+      await client.query('ROLLBACK')
+      throw err
+    } finally {
+      client.release()
     }
-
-    const columnMap = {
-      password: 'password_hash',
-      google: 'google_id',
-      github: 'github_id',
-      orcid: 'orcid_id',
-    }
-
-    await pool.query(
-      `UPDATE users SET ${columnMap[provider]} = NULL WHERE id = $1`,
-      [req.user.userId]
-    )
-
-    const updated = await getAuthUser(req.user.userId)
-    res.json(buildConnectionsResponse(updated))
   } catch (err) {
     console.error('DELETE /users/me/connections/:provider error:', err)
     res.status(500).json({ error: 'Internal server error' })
