@@ -51,6 +51,57 @@ describeNetwork('POST /papers/lookup (requires network)', () => {
   }, 15000)
 })
 
+describe('POST /papers/manual DOI validation', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('rejects manual metadata for a DOI that CrossRef can verify', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: async () => ({
+        message: {
+          title: ['Canonical CrossRef Title'],
+          author: [],
+        },
+      }),
+    })
+
+    const res = await request(app)
+      .post('/papers/manual')
+      .set('Cookie', cookie)
+      .send({
+        doi: `10.5555/manual-poison-${ts}`,
+        title: 'Attacker Controlled Title',
+        authors: 'Mallory Example',
+      })
+
+    expect(res.status).toBe(409)
+    expect(res.body.code).toBe('DOI_FOUND_ON_CROSSREF')
+  })
+
+  it('does not create a DOI paper when CrossRef cannot verify the DOI', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      status: 503,
+      ok: false,
+      json: async () => ({}),
+    })
+
+    const res = await request(app)
+      .post('/papers/manual')
+      .set('Cookie', cookie)
+      .send({
+        doi: `10.5555/manual-unverified-${ts}`,
+        title: 'Unverified DOI Title',
+        authors: 'Mallory Example',
+      })
+
+    expect(res.status).toBe(503)
+    expect(res.body.code).toBe('DOI_VERIFICATION_FAILED')
+  })
+})
+
 describe('POST /discussions', () => {
   it('creates a discussion for a manual paper', async () => {
     const paperRes = await request(app)

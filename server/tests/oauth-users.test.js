@@ -134,7 +134,7 @@ describe('linkOAuthProvider', () => {
     expect(db.query).toHaveBeenCalledTimes(3)
     const [updateSql, updateValues] = db.query.mock.calls[2]
     expect(updateSql).toContain('email = COALESCE(email, $2)')
-    expect(updateSql).toContain('WHEN email IS NULL OR lower(email) = lower($2) THEN true')
+    expect(updateSql).toContain('WHEN email IS NULL OR LOWER(email) = LOWER($2) THEN true')
     expect(updateSql).toContain('ELSE email_verified')
     expect(updateValues).toEqual([
       'google-verified',

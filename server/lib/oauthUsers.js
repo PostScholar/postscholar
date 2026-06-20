@@ -51,6 +51,9 @@ function formatUserResponse(user) {
 async function linkOAuthProvider(userId, provider, providerId, opts = {}) {
   const pool = require('../db')
   const idColumn = provider === 'google' ? 'google_id' : 'github_id'
+  const providerEmail = typeof opts.email === 'string' && opts.email.trim()
+    ? opts.email.trim()
+    : null
 
   const taken = await pool.query(
     `SELECT id FROM users WHERE ${idColumn} = $1 AND id != $2`,
@@ -75,19 +78,19 @@ async function linkOAuthProvider(userId, provider, providerId, opts = {}) {
   const updates = [`${idColumn} = $1`]
   const values = [providerId]
   let param = 2
-
   let emailParam = null
-  if (opts.email) {
-    emailParam = param++
-    updates.push(`email = COALESCE(email, $${emailParam})`)
-    values.push(opts.email)
+
+  if (providerEmail) {
+    emailParam = param
+    updates.push(`email = COALESCE(email, $${param++})`)
+    values.push(providerEmail)
   }
-  if (opts.emailVerified === true && emailParam !== null) {
+  if (emailParam && opts.emailVerified === true) {
     updates.push(
       `email_verified = CASE
-        WHEN email IS NULL OR lower(email) = lower($${emailParam}) THEN true
+        WHEN email IS NULL OR LOWER(email) = LOWER($${emailParam}) THEN true
         ELSE email_verified
-      END`
+       END`
     )
   }
   if (opts.displayName) {
