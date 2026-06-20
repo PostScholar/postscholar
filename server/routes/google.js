@@ -106,7 +106,7 @@ router.post('/callback', async (req, res) => {
       try {
         await linkOAuthProvider(userId, 'google', profile.id, {
           email: profile.email,
-          emailVerified: profile.verified_email !== false,
+          emailVerified: profile.verified_email === true,
           displayName: profile.name,
         })
       } catch (err) {
