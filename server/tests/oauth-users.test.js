@@ -119,45 +119,44 @@ describe('findOrCreateOAuthUser', () => {
 })
 
 describe('linkOAuthProvider', () => {
-  it('only verifies the stored email when the provider email matches or fills it', async () => {
+  it('only verifies email when the provider email matches or is adopted', async () => {
     db.query
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ google_id: null, github_id: null }] })
       .mockResolvedValueOnce({ rows: [] })
 
-    await linkOAuthProvider('user-1', 'google', 'google-1', {
+    await linkOAuthProvider('user-1', 'google', 'google-verified', {
       email: 'provider@example.com',
       emailVerified: true,
       displayName: 'Provider User',
     })
 
     expect(db.query).toHaveBeenCalledTimes(3)
-    const [sql, values] = db.query.mock.calls[2]
-    expect(sql).toContain('email_verified = CASE')
-    expect(sql).toContain('email IS NULL OR LOWER(email) = LOWER($2)')
-    expect(sql).not.toContain('WHEN $')
-    expect(values).toEqual([
-      'google-1',
+    const [updateSql, updateValues] = db.query.mock.calls[2]
+    expect(updateSql).toContain('email = COALESCE(email, $2)')
+    expect(updateSql).toContain('WHEN email IS NULL OR lower(email) = lower($2) THEN true')
+    expect(updateSql).toContain('ELSE email_verified')
+    expect(updateValues).toEqual([
+      'google-verified',
       'provider@example.com',
       'Provider User',
       'user-1',
     ])
   })
 
-  it('does not mark email verified when the provider email is unverified', async () => {
+  it('does not mark email verified when provider did not verify it', async () => {
     db.query
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ google_id: null, github_id: null }] })
       .mockResolvedValueOnce({ rows: [] })
 
-    await linkOAuthProvider('user-1', 'google', 'google-1', {
+    await linkOAuthProvider('user-1', 'google', 'google-unverified', {
       email: 'provider@example.com',
       emailVerified: false,
     })
 
-    expect(db.query).toHaveBeenCalledTimes(3)
-    const [sql, values] = db.query.mock.calls[2]
-    expect(sql).not.toContain('email_verified')
-    expect(values).toEqual(['google-1', 'provider@example.com', 'user-1'])
+    const [updateSql] = db.query.mock.calls[2]
+    expect(updateSql).toContain('email = COALESCE(email, $2)')
+    expect(updateSql).not.toContain('email_verified = CASE')
   })
 })
