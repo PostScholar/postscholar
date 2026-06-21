@@ -11,12 +11,6 @@ const router = express.Router()
 const BCRYPT_COST = 12
 
 const AUTH_FIELDS = `id, email, password_hash, google_id, github_id, orcid_id, email_verified`
-const SIGN_IN_METHOD_COUNT_SQL = `(
-  CASE WHEN password_hash IS NOT NULL THEN 1 ELSE 0 END +
-  CASE WHEN google_id IS NOT NULL THEN 1 ELSE 0 END +
-  CASE WHEN github_id IS NOT NULL THEN 1 ELSE 0 END +
-  CASE WHEN orcid_id IS NOT NULL THEN 1 ELSE 0 END
-)`
 const COLUMN_BY_PROVIDER = {
   password: 'password_hash',
   google: 'google_id',
