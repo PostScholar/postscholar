@@ -36,16 +36,48 @@ async function unlinkProvider(userId, provider) {
   const column = COLUMN_BY_PROVIDER[provider]
   if (!column) return null
 
-  const result = await pool.query(
-    `UPDATE users
-     SET ${column} = NULL
-     WHERE id = $1
-       AND ${column} IS NOT NULL
-       AND ${SIGN_IN_METHOD_COUNT_SQL} > 1
-     RETURNING ${AUTH_FIELDS}`,
-    [userId]
-  )
-  return result.rows[0] || null
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+
+    const locked = await client.query(
+      `SELECT ${AUTH_FIELDS} FROM users WHERE id = $1 FOR UPDATE`,
+      [userId]
+    )
+    const user = locked.rows[0]
+    if (!user || !user[column]) {
+      await client.query('ROLLBACK')
+      return null
+    }
+
+    const signInMethodCount = [
+      user.password_hash,
+      user.google_id,
+      user.github_id,
+      user.orcid_id,
+    ].filter(Boolean).length
+
+    if (signInMethodCount <= 1) {
+      await client.query('ROLLBACK')
+      return null
+    }
+
+    const result = await client.query(
+      `UPDATE users
+       SET ${column} = NULL
+       WHERE id = $1
+       RETURNING ${AUTH_FIELDS}`,
+      [userId]
+    )
+
+    await client.query('COMMIT')
+    return result.rows[0] || null
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
 }
 
 router.get('/', authenticateToken, async (req, res) => {
