@@ -1,5 +1,6 @@
 jest.mock('../db', () => ({
   query: jest.fn(),
+  connect: jest.fn(),
 }))
 
 const pool = require('../db')
@@ -7,10 +8,11 @@ const { unlinkProvider } = require('../routes/connections')
 
 beforeEach(() => {
   pool.query.mockReset()
+  pool.connect.mockReset()
 })
 
 describe('unlinkProvider', () => {
-  it('unlinks with an atomic last-sign-in-method guard', async () => {
+  it('locks the user row before unlinking a sign-in method', async () => {
     const updated = {
       id: 'user-1',
       email: 'user@example.com',
@@ -20,28 +22,65 @@ describe('unlinkProvider', () => {
       orcid_id: null,
       email_verified: true,
     }
-    pool.query.mockResolvedValueOnce({ rows: [updated] })
+    const client = {
+      query: jest.fn()
+        .mockResolvedValueOnce({})
+        .mockResolvedValueOnce({
+          rows: [{
+            ...updated,
+            google_id: 'google-1',
+          }],
+        })
+        .mockResolvedValueOnce({ rows: [updated] })
+        .mockResolvedValueOnce({}),
+      release: jest.fn(),
+    }
+    pool.connect.mockResolvedValueOnce(client)
 
     await expect(unlinkProvider('user-1', 'google')).resolves.toBe(updated)
 
-    expect(pool.query).toHaveBeenCalledTimes(1)
-    const [sql, params] = pool.query.mock.calls[0]
-    expect(sql).toContain('UPDATE users')
-    expect(sql).toContain('SET google_id = NULL')
-    expect(sql).toContain('AND google_id IS NOT NULL')
-    expect(sql).toContain('CASE WHEN password_hash IS NOT NULL THEN 1 ELSE 0 END')
-    expect(sql).toContain('CASE WHEN google_id IS NOT NULL THEN 1 ELSE 0 END')
-    expect(sql).toContain(') > 1')
-    expect(sql).toContain('RETURNING id, email, password_hash, google_id, github_id, orcid_id, email_verified')
-    expect(params).toEqual(['user-1'])
+    expect(pool.connect).toHaveBeenCalledTimes(1)
+    expect(client.query).toHaveBeenNthCalledWith(1, 'BEGIN')
+
+    const [lockSql, lockParams] = client.query.mock.calls[1]
+    expect(lockSql).toContain('SELECT id, email, password_hash, google_id, github_id, orcid_id, email_verified')
+    expect(lockSql).toContain('FOR UPDATE')
+    expect(lockParams).toEqual(['user-1'])
+
+    const [updateSql, updateParams] = client.query.mock.calls[2]
+    expect(updateSql).toContain('UPDATE users')
+    expect(updateSql).toContain('SET google_id = NULL')
+    expect(updateSql).toContain('RETURNING id, email, password_hash, google_id, github_id, orcid_id, email_verified')
+    expect(updateParams).toEqual(['user-1'])
+
+    expect(client.query).toHaveBeenNthCalledWith(4, 'COMMIT')
+    expect(client.release).toHaveBeenCalledTimes(1)
   })
 
   it('returns null when the conditional unlink does not update a row', async () => {
-    pool.query.mockResolvedValueOnce({ rows: [] })
+    const client = {
+      query: jest.fn()
+        .mockResolvedValueOnce({})
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'user-1',
+            email: 'user@example.com',
+            password_hash: 'hash',
+            google_id: null,
+            github_id: null,
+            orcid_id: null,
+            email_verified: true,
+          }],
+        })
+        .mockResolvedValueOnce({}),
+      release: jest.fn(),
+    }
+    pool.connect.mockResolvedValueOnce(client)
 
     await expect(unlinkProvider('user-1', 'password')).resolves.toBeNull()
 
-    const [sql] = pool.query.mock.calls[0]
-    expect(sql).toContain('SET password_hash = NULL')
+    expect(client.query).toHaveBeenNthCalledWith(1, 'BEGIN')
+    expect(client.query).toHaveBeenNthCalledWith(3, 'ROLLBACK')
+    expect(client.release).toHaveBeenCalledTimes(1)
   })
 })

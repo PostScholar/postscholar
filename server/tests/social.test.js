@@ -123,6 +123,38 @@ describe('GET /mentions', () => {
   })
 })
 
+describe('DELETE /discussions/comments/:id', () => {
+  it('does not delete replies written by another user', async () => {
+    const parentRes = await request(app)
+      .post(`/discussions/${discussionId}/comments`)
+      .set('Cookie', cookieA)
+      .send({ body: 'Parent comment for deletion test' })
+    expect(parentRes.status).toBe(201)
+
+    const replyRes = await request(app)
+      .post(`/discussions/${discussionId}/comments`)
+      .set('Cookie', cookieB)
+      .send({
+        body: 'Reply that must not be deleted',
+        parent_comment_id: parentRes.body.comment.id,
+      })
+    expect(replyRes.status).toBe(201)
+
+    const deleteRes = await request(app)
+      .delete(`/discussions/comments/${parentRes.body.comment.id}`)
+      .set('Cookie', cookieA)
+
+    expect(deleteRes.status).toBe(409)
+    expect(deleteRes.body.code).toBe('THREAD_CONTAINS_OTHER_AUTHORS')
+
+    const remaining = await pool.query(
+      'SELECT id FROM comments WHERE id = $1',
+      [replyRes.body.comment.id]
+    )
+    expect(remaining.rows.length).toBe(1)
+  })
+})
+
 describe('POST /reports', () => {
   it('submits a report', async () => {
     const res = await request(app)
