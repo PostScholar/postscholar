@@ -113,7 +113,7 @@ Migration state is tracked in the `migrations` table (not `schema_migrations`).
 
 1. Create a new SQL file in `server/db/migrations/`:
 ```bash
-touch server/db/migrations/016_your_migration_name.sql
+touch server/db/migrations/024_your_migration_name.sql
 ```
 
 2. Write idempotent SQL:
@@ -310,7 +310,7 @@ npm run lint
 Before deploying major changes:
 
 - [ ] Test auth flow (register, login, logout)
-- [ ] Test paper lookup with valid DOI
+- [ ] Test paper lookup with valid DOI and manual fallback
 - [ ] Test discussion creation
 - [ ] Test commenting and replies
 - [ ] Test ORCID verification
