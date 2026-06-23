@@ -14,10 +14,9 @@
 }
 
 .mark {
-  width: 28px;
-  height: 28px;
+  height: 32px;
+  width: auto;
   flex-shrink: 0;
-  color: var(--text-primary);
 }
 
 .wordmark {
