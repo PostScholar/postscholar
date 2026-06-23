@@ -23,6 +23,10 @@
   gap: var(--space-4);
 }
 
+.navLogo {
+  align-self: center;
+}
+
 /* Wordmark */
 .wordmark {
   font-size: var(--text-xl);

@@ -1,6 +1,8 @@
 .link {
   text-decoration: none;
   display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .link:hover {
@@ -9,15 +11,16 @@
 
 .logo {
   display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+  align-items: flex-end;
+  gap: 0.625rem;
 }
 
 .mark {
-  width: 28px;
+  display: block;
   height: 28px;
+  width: auto;
   flex-shrink: 0;
-  color: var(--text-primary);
+  max-height: 28px;
 }
 
 .wordmark {
@@ -27,6 +30,7 @@
   color: var(--text-primary);
   letter-spacing: -0.02em;
   line-height: 1;
+  padding-bottom: 2px;
 }
 
 .accent {

@@ -131,7 +131,7 @@ export default function Nav() {
   return (
     <nav className={styles.nav}>
       <div className={styles.inner}>
-        <Logo variant="full" href="/" />
+        <Logo variant="full" href="/" className={styles.navLogo} />
 
         <form onSubmit={handleSearch} className={styles.search}>
           <input
