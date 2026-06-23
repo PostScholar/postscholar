@@ -5,6 +5,12 @@ import { SITE_NAME, SITE_URL } from '@/lib/site'
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
+  icons: {
+    icon: [
+      { url: '/favicon-48.png', sizes: '48x48', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   title: {
     default: `${SITE_NAME} — Academic discussion for published research`,
     template: `%s — ${SITE_NAME}`,

@@ -1,23 +1,26 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import styles from './Logo.module.css'
 
+// Trimmed from rabbit-logo.png — full resolution so CSS downscale stays crisp
+const MARK_W = 358
+const MARK_H = 495
+
 function LogoMark({ className }) {
   return (
-    <Image
-      src="/logo-mark.png"
+    <img
+      src="/rabbit-logo-mark.png"
       alt=""
-      width={23}
-      height={32}
       className={className}
-      priority
+      width={MARK_W}
+      height={MARK_H}
+      decoding="async"
     />
   )
 }
 
 export default function Logo({ variant = 'full', href = '/', className = '' }) {
   const content = (
-    <span className={`${styles.logo} ${className}`}>
+    <span className={styles.logo}>
       <LogoMark className={styles.mark} />
       {variant === 'full' && (
         <span className={styles.wordmark}>
@@ -29,7 +32,7 @@ export default function Logo({ variant = 'full', href = '/', className = '' }) {
 
   if (href) {
     return (
-      <Link href={href} className={styles.link} aria-label="PostScholar home">
+      <Link href={href} className={`${styles.link} ${className}`.trim()} aria-label="PostScholar home">
         {content}
       </Link>
     )
