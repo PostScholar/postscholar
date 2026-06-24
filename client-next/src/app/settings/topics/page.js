@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -20,22 +20,14 @@ function flattenTopics(topics) {
 }
 
 export default function TopicsPage() {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
   const [followed, setFollowed] = useState([])
   const [allTopics, setAllTopics] = useState([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(null)
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/login')
-      return
-    }
-    loadData()
-  }, [user])
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
       const [followedData, topicsData] = await Promise.all([
@@ -49,7 +41,16 @@ export default function TopicsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      router.replace('/login')
+      return
+    }
+    loadData()
+  }, [user, authLoading, router, loadData])
 
   const followedSlugs = new Set(followed.map(t => t.topic))
 

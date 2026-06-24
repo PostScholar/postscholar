@@ -90,7 +90,7 @@ function CustomTagInput({ customTagInput, setCustomTagInput, parseCustomTags }) 
 }
 
 export default function Start() {
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
 
   const [doi, setDoi] = useState('')
@@ -112,17 +112,14 @@ export default function Start() {
       .catch(() => {})
   }, [])
 
-  const [isReady, setIsReady] = useState(false)
-
   useEffect(() => {
+    if (isLoading) return
     if (!user) {
       router.replace('/login')
-    } else {
-      setIsReady(true)
     }
-  }, [user, router])
+  }, [user, isLoading, router])
 
-  if (!isReady || !user) {
+  if (isLoading || !user) {
     return null
   }
 
