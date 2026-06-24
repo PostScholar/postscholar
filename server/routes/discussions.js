@@ -535,20 +535,55 @@ router.post('/comments/:id/react', authenticateToken, async (req, res) => {
 // DELETE /discussions/comments/:id
 // ---------------------------------------------------------------------------
 // Protected (authenticateToken). Deletes a comment.
-// Only the comment's author can delete it.
-// Cascades to all replies via ON DELETE CASCADE in the schema.
+// Only the comment's author can delete it. Refuses to cascade over replies
+// written by other users so authors cannot delete someone else's comments.
 // ---------------------------------------------------------------------------
 router.delete('/comments/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params
 
     const result = await pool.query(
-      'DELETE FROM comments WHERE id = $1 AND user_id = $2 RETURNING id',
+      `WITH RECURSIVE subtree AS (
+         SELECT id, user_id
+         FROM comments
+         WHERE id = $1 AND user_id = $2
+         UNION ALL
+         SELECT c.id, c.user_id
+         FROM comments c
+         INNER JOIN subtree s ON c.parent_comment_id = s.id
+       ),
+       delete_check AS (
+         SELECT
+           COUNT(*)::int AS total_count,
+           (COUNT(*) FILTER (WHERE user_id <> $2))::int AS other_author_count
+         FROM subtree
+       ),
+       deleted AS (
+         DELETE FROM comments
+         WHERE id = $1
+           AND user_id = $2
+           AND (SELECT total_count FROM delete_check) > 0
+           AND (SELECT other_author_count FROM delete_check) = 0
+         RETURNING id
+       )
+       SELECT delete_check.total_count,
+              delete_check.other_author_count,
+              deleted.id AS deleted_id
+       FROM delete_check
+       LEFT JOIN deleted ON TRUE`,
       [id, req.user.userId]
     )
 
-    if (result.rows.length === 0) {
+    const deleteResult = result.rows[0]
+    if (!deleteResult || deleteResult.total_count === 0) {
       return res.status(403).json({ error: 'Not found or not authorized' })
+    }
+
+    if (deleteResult.other_author_count > 0) {
+      return res.status(409).json({
+        error: 'Cannot delete a comment thread that contains replies from other users',
+        code: 'THREAD_CONTAINS_OTHER_AUTHORS',
+      })
     }
 
     return res.json({ deleted: true })
