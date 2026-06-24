@@ -34,7 +34,7 @@ Or from `server/`:
 cd server && npm run migrate
 ```
 
-New migrations must be applied before tests that depend on new columns (e.g. `021_oauth_and_verification.sql`, `022_display_name.sql`).
+New migrations must be applied before tests that depend on new columns (e.g. `021_oauth_and_verification.sql`, `022_display_name.sql`, `023_paper_url.sql`).
 
 ### Environment
 
@@ -80,7 +80,7 @@ npm test -- tests/papers.test.js
 | `connections.test.js` | Linked sign-in methods, unlink safeguards, OAuth link URL endpoints |
 | `oauth-users.test.js` | OAuth user creation/linking helpers and verified-email safeguards |
 | `social.test.js` | Follows, mentions, appreciation notifications, reports/moderation |
-| `papers.test.js` | Manual paper + discussion + comment flow |
+| `papers.test.js` | Manual paper DOI validation, discussion creation, comment flow |
 
 ### Skipped / network tests
 
@@ -131,7 +131,7 @@ When shipping auth/schema changes:
    - `http://localhost:3001/auth/google/callback` (local dev)
    - `http://localhost:3001/auth/github/callback` (local dev)
 
-Migrations should run **as soon as the new server code is live** — the API expects columns from `021` and `022`. OAuth env vars can be added after deploy; social buttons return a clear error until then.
+Migrations should run **as soon as the new server code is live** — the API expects columns from `021`, `022`, and `023`. OAuth env vars can be added after deploy; social buttons return a clear error until then.
 
 ---
 

@@ -59,6 +59,7 @@ PostScholar follows a modern client-server architecture:
 - Stores paper metadata from CrossRef or manual entry
 - `source` field tracks whether paper came from CrossRef or manual entry
 - `authors_json` stores structured author data
+- `paper_url` stores optional external links for manually entered papers
 
 **discussions**
 - One discussion per paper (enforced at application layer, not DB)
@@ -98,15 +99,16 @@ PostScholar follows a modern client-server architecture:
 
 Location: `server/db/migrations/*.sql`
 
-Migrations are numbered sequentially (001-022 currently) and tracked in the `migrations` table.
+Migrations are numbered sequentially (001-023 currently) and tracked in the `migrations` table.
 
-Recent social/auth/profile migrations:
+Recent social/auth/profile/paper migrations:
 - `016_mentions.sql` / `020_mention_types.sql` — mention notifications and notification type metadata
 - `017_topic_follows.sql` — followed topics for feed personalization
 - `018_user_roles.sql` — moderator/admin roles
 - `019_comment_reactions.sql` — comment appreciation reactions
 - `021_oauth_and_verification.sql` — nullable local-auth fields, Google/GitHub IDs, email verification tokens
 - `022_display_name.sql` — optional display names separate from immutable usernames
+- `023_paper_url.sql` — optional external URL for manually entered papers
 
 **Key patterns**:
 ```sql
@@ -390,7 +392,7 @@ Automatically includes credentials and handles errors.
 
 ### CrossRef API
 
-**Purpose**: Fetch paper metadata by DOI
+**Purpose**: Fetch paper metadata by DOI and verify optional manual-entry DOIs
 
 **Endpoint**: `https://api.crossref.org/works/{doi}`
 
@@ -405,6 +407,8 @@ const res = await fetch(crossrefUrl, {
 ```
 
 **Normalization**: CrossRef returns inconsistent data - we normalize it via `normalizeCrossRef()` function.
+
+`POST /papers/lookup` returns `{ found: false, lookup_failed: true }` when CrossRef is unavailable. `POST /papers/manual` can accept optional `doi` and `paper_url`; a supplied DOI is rejected if it already exists locally, is found on CrossRef, or cannot be verified because CrossRef is unavailable. `paper_url` must be an `http` or `https` URL.
 
 ### ORCID OAuth
 
