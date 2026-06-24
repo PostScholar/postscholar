@@ -5,8 +5,13 @@ const AppError = require('../lib/AppError')
 const {
   signToken,
   setTokenCookie,
-  signOAuthState,
+  createOAuthNonce,
+  setOAuthNonceCookie,
+  clearOAuthNonceCookie,
   verifyOAuthState,
+  signOAuthState,
+  signOAuthLoginState,
+  hasValidOAuthNonce,
 } = require('../lib/session')
 const { findAvailableUsername, formatUserResponse, linkOAuthProvider } = require('../lib/oauthUsers')
 const authenticateToken = require('../middleware/authenticateToken')
@@ -44,7 +49,9 @@ router.get('/url', (req, res) => {
   if (!process.env.GOOGLE_CLIENT_ID) {
     return res.status(503).json({ error: 'Google sign-in is not configured' })
   }
-  const state = signOAuthState({ provider: 'google', mode: 'login' })
+  const nonce = createOAuthNonce()
+  const state = signOAuthLoginState('google', nonce)
+  setOAuthNonceCookie(res, nonce)
   res.json({ url: buildGoogleAuthUrl(state) })
 })
 
@@ -93,6 +100,11 @@ router.post('/callback', async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired state' })
     }
 
+    if (statePayload.mode === 'login' && !hasValidOAuthNonce(req, statePayload)) {
+      clearOAuthNonceCookie(res)
+      return res.status(400).json({ error: 'Invalid or expired state' })
+    }
+
     const profile = await exchangeGoogleCode(code)
     if (!profile?.id) {
       return res.status(502).json({ error: 'Failed to fetch Google profile' })
@@ -127,6 +139,7 @@ router.post('/callback', async (req, res) => {
 
     const sessionToken = signToken({ userId: user.id, username: user.username })
     setTokenCookie(res, sessionToken)
+    clearOAuthNonceCookie(res)
     res.json(formatUserResponse(user))
   } catch (err) {
     if (err.statusCode) {

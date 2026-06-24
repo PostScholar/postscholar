@@ -3,8 +3,13 @@ const jwt = require('jsonwebtoken')
 const {
   signToken,
   setTokenCookie,
-  signOAuthState,
+  createOAuthNonce,
+  setOAuthNonceCookie,
+  clearOAuthNonceCookie,
   verifyOAuthState,
+  signOAuthState,
+  signOAuthLoginState,
+  hasValidOAuthNonce,
 } = require('../lib/session')
 const { formatUserResponse, linkOAuthProvider } = require('../lib/oauthUsers')
 const { findOrCreateOAuthUser } = require('./google')
@@ -39,7 +44,9 @@ router.get('/url', (req, res) => {
   if (!process.env.GITHUB_CLIENT_ID) {
     return res.status(503).json({ error: 'GitHub sign-in is not configured' })
   }
-  const state = signOAuthState({ provider: 'github', mode: 'login' })
+  const nonce = createOAuthNonce()
+  const state = signOAuthLoginState('github', nonce)
+  setOAuthNonceCookie(res, nonce)
   res.json({ url: buildGithubAuthUrl(state) })
 })
 
@@ -131,6 +138,11 @@ router.post('/callback', async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired state' })
     }
 
+    if (statePayload.mode === 'login' && !hasValidOAuthNonce(req, statePayload)) {
+      clearOAuthNonceCookie(res)
+      return res.status(400).json({ error: 'Invalid or expired state' })
+    }
+
     const githubData = await fetchGithubProfile(code)
     if (!githubData) {
       return res.status(502).json({ error: 'Failed to obtain GitHub access token' })
@@ -165,6 +177,7 @@ router.post('/callback', async (req, res) => {
 
     const sessionToken = signToken({ userId: user.id, username: user.username })
     setTokenCookie(res, sessionToken)
+    clearOAuthNonceCookie(res)
     res.json(formatUserResponse(user))
   } catch (err) {
     if (err.statusCode) {

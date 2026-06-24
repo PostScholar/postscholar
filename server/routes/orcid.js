@@ -6,8 +6,13 @@ const authenticateToken = require('../middleware/authenticateToken')
 const {
   signToken,
   setTokenCookie,
+  createOAuthNonce,
+  setOAuthNonceCookie,
+  clearOAuthNonceCookie,
   signOAuthState,
   verifyOAuthState,
+  signOAuthLoginState,
+  hasValidOAuthNonce,
   signCompletionToken,
 } = require('../lib/session')
 const { formatUserResponse } = require('../lib/oauthUsers')
@@ -84,7 +89,9 @@ router.get('/login/url', (req, res) => {
   if (!process.env.ORCID_CLIENT_ID) {
     return res.status(503).json({ error: 'ORCID sign-in is not configured' })
   }
-  const state = signOAuthState({ mode: 'login', provider: 'orcid' })
+  const nonce = createOAuthNonce()
+  const state = signOAuthLoginState('orcid', nonce)
+  setOAuthNonceCookie(res, nonce)
   return res.json({ url: buildOrcidAuthUrl(state) })
 })
 
@@ -143,6 +150,15 @@ router.post('/callback', async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired state' })
     }
 
+    if (statePayload.mode === 'login') {
+      if (statePayload.provider !== 'orcid' || !hasValidOAuthNonce(req, statePayload)) {
+        clearOAuthNonceCookie(res)
+        return res.status(400).json({ error: 'Invalid or expired state' })
+      }
+    } else if (statePayload.provider && statePayload.provider !== 'orcid') {
+      return res.status(400).json({ error: 'Invalid or expired state' })
+    }
+
     const tokenData = await exchangeOrcidCode(code)
     if (!tokenData) {
       return res.status(502).json({ error: 'Failed to exchange ORCID code' })
@@ -188,6 +204,7 @@ async function handleOrcidLogin(req, res, { orcidId, displayName }) {
     const user = existing.rows[0]
     const sessionToken = signToken({ userId: user.id, username: user.username })
     setTokenCookie(res, sessionToken)
+    clearOAuthNonceCookie(res)
     return res.json({ ...formatUserResponse(user), mode: 'login' })
   }
 
@@ -198,6 +215,7 @@ async function handleOrcidLogin(req, res, { orcidId, displayName }) {
     email: null,
   })
 
+  clearOAuthNonceCookie(res)
   return res.json({
     needs_completion: true,
     completion_token: completionToken,
