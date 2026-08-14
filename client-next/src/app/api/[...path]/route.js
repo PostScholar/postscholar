@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 
 // Get the backend API URL from environment
 const BACKEND_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
@@ -61,6 +60,12 @@ async function handler(request, { params }) {
     // Get response body
     const responseBody = await backendResponse.text()
 
+    // Create response with same status and headers
+    const response = new NextResponse(responseBody, {
+      status: backendResponse.status,
+      statusText: backendResponse.statusText,
+    })
+
     // Handle Set-Cookie headers - parse and re-set for frontend domain
     const setCookieHeader = backendResponse.headers.get('set-cookie')
     if (setCookieHeader) {
@@ -86,17 +91,10 @@ async function handler(request, { params }) {
         }
       })
 
-      // Set cookie via Next.js cookies() API for frontend domain
-      const cookieStore = await cookies()
-      cookieStore.set(name, value, options)
+      // Set cookie on response using NextResponse.cookies API
+      response.cookies.set(name, value, options)
       console.log('[API Proxy] Set cookie:', name, 'with options:', options)
     }
-
-    // Create response with same status and headers
-    const response = new NextResponse(responseBody, {
-      status: backendResponse.status,
-      statusText: backendResponse.statusText,
-    })
 
     // Forward other response headers (exclude set-cookie since we handled it)
     backendResponse.headers.forEach((value, key) => {
