@@ -1,3 +1,5 @@
+# No longer in use — migrated to Render. See server/index.js + Render dashboard config instead.
+
 name = "postscholar-api-backend"
 main = "worker.js"
 compatibility_date = "2026-08-13"
@@ -15,6 +17,15 @@ enabled = true
 NODE_ENV = "production"
 CLIENT_URL = "https://postscholar.org"
 PORT = "3000"
+
+# Hyperdrive configuration for Neon database connection pooling
+# TODO: After creating Hyperdrive config in Cloudflare dashboard, paste the config ID below
+# Create Hyperdrive: https://dash.cloudflare.com/?to=/:account/workers/hyperdrive
+# Use your Neon connection string when creating the Hyperdrive config
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "c0d94a7ed3f349939978be29e78ed401"
+localConnectionString = "postgresql://neondb_owner:npg_2n4amjGXNPoC@ep-lively-queen-a6vatd1d.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 # Sensitive values (JWT_SECRET, DATABASE_URL, API keys)
 # must be set as secrets via: wrangler secret put <KEY_NAME>
