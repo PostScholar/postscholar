@@ -5,6 +5,7 @@ const cors = require('cors')
 const cookieParser = require('cookie-parser')
 const helmet = require('helmet')
 const rateLimit = require('express-rate-limit')
+const { ipKeyGenerator } = require('express-rate-limit')
 const exploreRouter = require('./routes/explore')
 const errorHandler = require('./middleware/errorHandler')
 const app = express()
@@ -30,7 +31,7 @@ app.use(express.json())
 app.use(cookieParser())
 
 const rateLimiterKeyGenerator = (req) => {
-  return req.ip || req.headers['x-forwarded-for'] || 'unknown'
+  return ipKeyGenerator(req.ip) || req.headers['x-forwarded-for'] || 'unknown'
 }
 
 const authLimiter = rateLimit({
