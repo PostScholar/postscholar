@@ -71,9 +71,13 @@ async function handler(request, { params }) {
       // Skip some headers that Next.js handles
       if (!['content-encoding', 'transfer-encoding'].includes(key.toLowerCase())) {
         response.headers.set(key, value)
+        if (key.toLowerCase() === 'set-cookie') {
+          console.log('[API Proxy] Forwarding Set-Cookie:', value)
+        }
       }
     })
 
+    console.log('[API Proxy] Response status:', backendResponse.status)
     return response
   } catch (error) {
     console.error('[API Proxy] ERROR:', error)

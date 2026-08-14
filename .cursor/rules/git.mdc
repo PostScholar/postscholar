@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+Git: Never run git commit, git push, git push --force, or gh pr create unless I 
+explicitly ask you to execute them (e.g. "commit and push", "create the PR"). 
+For PR/branch work, provide the exact commands in a copy-paste block and wait 
+for me to run them.
