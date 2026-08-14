@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
 // Get the backend API URL from environment
 const BACKEND_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
@@ -60,20 +61,47 @@ async function handler(request, { params }) {
     // Get response body
     const responseBody = await backendResponse.text()
 
+    // Handle Set-Cookie headers - parse and re-set for frontend domain
+    const setCookieHeader = backendResponse.headers.get('set-cookie')
+    if (setCookieHeader) {
+      console.log('[API Proxy] Backend Set-Cookie:', setCookieHeader)
+
+      // Parse cookie: "name=value; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
+      const cookieParts = setCookieHeader.split(';').map(p => p.trim())
+      const [nameValue] = cookieParts
+      const [name, value] = nameValue.split('=')
+
+      // Extract cookie attributes
+      const options = {}
+      cookieParts.slice(1).forEach(part => {
+        const lower = part.toLowerCase()
+        if (lower === 'httponly') options.httpOnly = true
+        else if (lower === 'secure') options.secure = true
+        else if (lower.startsWith('samesite=')) {
+          options.sameSite = part.split('=')[1].toLowerCase()
+        } else if (lower.startsWith('path=')) {
+          options.path = part.split('=')[1]
+        } else if (lower.startsWith('max-age=')) {
+          options.maxAge = parseInt(part.split('=')[1])
+        }
+      })
+
+      // Set cookie via Next.js cookies() API for frontend domain
+      const cookieStore = await cookies()
+      cookieStore.set(name, value, options)
+      console.log('[API Proxy] Set cookie:', name, 'with options:', options)
+    }
+
     // Create response with same status and headers
     const response = new NextResponse(responseBody, {
       status: backendResponse.status,
       statusText: backendResponse.statusText,
     })
 
-    // Forward response headers (especially Set-Cookie)
+    // Forward other response headers (exclude set-cookie since we handled it)
     backendResponse.headers.forEach((value, key) => {
-      // Skip some headers that Next.js handles
-      if (!['content-encoding', 'transfer-encoding'].includes(key.toLowerCase())) {
+      if (!['content-encoding', 'transfer-encoding', 'set-cookie'].includes(key.toLowerCase())) {
         response.headers.set(key, value)
-        if (key.toLowerCase() === 'set-cookie') {
-          console.log('[API Proxy] Forwarding Set-Cookie:', value)
-        }
       }
     })
 
