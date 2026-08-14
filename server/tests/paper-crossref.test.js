@@ -30,7 +30,9 @@ describe('fetchCrossRefPaper', () => {
         journal: 'Journal of Tests',
         year: 2024,
         abstract: 'Abstract text',
+        suggestedTopics: [],
       },
+      source: 'crossref',
     })
   })
 
