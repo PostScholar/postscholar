@@ -1,8 +1,4 @@
-// Only load .env file in non-Workers environment (local dev)
-// In Cloudflare Workers, env vars are set via wrangler config/secrets
-if (typeof __dirname !== 'undefined') {
-  require('dotenv').config({ path: require('path').join(__dirname, '.env') })
-}
+require('dotenv').config({ path: require('path').join(__dirname, '.env') })
 
 const isProd = process.env.NODE_ENV === 'production'
 const isTest = process.env.NODE_ENV === 'test'

@@ -9,7 +9,7 @@ const exploreRouter = require('./routes/explore')
 const errorHandler = require('./middleware/errorHandler')
 const app = express()
 
-// Railway/Vercel sit behind a reverse proxy; required for express-rate-limit
+// Render sits behind a reverse proxy; required for express-rate-limit
 app.set('trust proxy', 1)
 
 const corsOrigins = [
@@ -29,9 +29,8 @@ app.use(cors({
 app.use(express.json())
 app.use(cookieParser())
 
-// Cloudflare Workers compatible rate limiter key generator
 const rateLimiterKeyGenerator = (req) => {
-  return req.ip || req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || 'unknown'
+  return req.ip || req.headers['x-forwarded-for'] || 'unknown'
 }
 
 const authLimiter = rateLimit({
@@ -42,7 +41,6 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many attempts, please try again later.' },
   keyGenerator: rateLimiterKeyGenerator,
-  skip: () => config.isProd, // TODO: Replace with Cloudflare Rate Limiting API or Durable Objects
 })
 
 const generalLimiter = rateLimit({
@@ -52,7 +50,6 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
   keyGenerator: rateLimiterKeyGenerator,
-  skip: () => config.isProd, // TODO: Replace with Cloudflare Rate Limiting API or Durable Objects
 })
 
 const db = require('./db')
