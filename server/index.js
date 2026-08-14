@@ -29,6 +29,11 @@ app.use(cors({
 app.use(express.json())
 app.use(cookieParser())
 
+// Cloudflare Workers compatible rate limiter key generator
+const rateLimiterKeyGenerator = (req) => {
+  return req.ip || req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || 'unknown'
+}
+
 const authLimiter = rateLimit({
   windowMs: config.rateLimits.auth.windowMs,
   max: config.rateLimits.auth.max,
@@ -36,6 +41,8 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many attempts, please try again later.' },
+  keyGenerator: rateLimiterKeyGenerator,
+  skip: () => config.isProd, // Disable in production (Workers) for now
 })
 
 const generalLimiter = rateLimit({
@@ -44,6 +51,8 @@ const generalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
+  keyGenerator: rateLimiterKeyGenerator,
+  skip: () => config.isProd, // Disable in production (Workers) for now
 })
 
 const db = require('./db')

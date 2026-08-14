@@ -1,0 +1,22 @@
+name = "postscholar-api-backend"
+main = "worker.js"
+compatibility_date = "2026-08-13"
+compatibility_flags = ["nodejs_compat", "enable_nodejs_http_server_modules"]
+
+# Let wrangler handle bundling automatically
+
+[observability]
+enabled = true
+
+# Environment variables
+# Set secrets via: wrangler secret put DATABASE_URL
+# Or set them in the Cloudflare dashboard after deployment
+[vars]
+NODE_ENV = "production"
+CLIENT_URL = "https://postscholar.org"
+PORT = "3000"
+
+# Sensitive values (JWT_SECRET, DATABASE_URL, API keys)
+# must be set as secrets via: wrangler secret put <KEY_NAME>
+
+# Optional: Configure custom domains later via Cloudflare dashboard
