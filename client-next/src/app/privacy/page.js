@@ -16,7 +16,7 @@ const sections = [
   { id: 'cookies', label: 'Cookies and Tracking' },
   { id: 'security', label: 'Security' },
   { id: 'international', label: 'International Transfers' },
-  { id: 'children', label: 'Children's Privacy' },
+  { id: 'children', label: "Children's Privacy" },
   { id: 'changes', label: 'Changes to This Policy' },
   { id: 'contact', label: 'Contact Us' },
 ]
