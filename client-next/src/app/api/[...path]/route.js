@@ -18,11 +18,15 @@ const BACKEND_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'h
 
 async function handler(request, { params }) {
   try {
+    console.log('[API Proxy] Request:', request.method, request.url)
+    console.log('[API Proxy] BACKEND_URL:', BACKEND_URL)
+
     // Extract path segments from catch-all route
     const path = params.path ? params.path.join('/') : ''
 
     // Build the backend URL
     const backendUrl = `${BACKEND_URL}/${path}`
+    console.log('[API Proxy] Forwarding to:', backendUrl)
 
     // Get search params from original request
     const { searchParams } = new URL(request.url)
@@ -72,9 +76,14 @@ async function handler(request, { params }) {
 
     return response
   } catch (error) {
-    console.error('API Proxy Error:', error)
+    console.error('[API Proxy] ERROR:', error)
+    console.error('[API Proxy] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause
+    })
     return NextResponse.json(
-      { error: 'Failed to proxy request to backend' },
+      { error: 'Failed to proxy request to backend', details: error.message },
       { status: 502 }
     )
   }
