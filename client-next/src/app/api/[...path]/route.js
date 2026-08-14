@@ -77,7 +77,13 @@ async function handler(request, { params }) {
       const [name, value] = nameValue.split('=')
 
       // Extract cookie attributes
-      const options = {}
+      const options = {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      }
+
       cookieParts.slice(1).forEach(part => {
         const lower = part.toLowerCase()
         if (lower === 'httponly') options.httpOnly = true
@@ -88,10 +94,13 @@ async function handler(request, { params }) {
           options.path = part.split('=')[1]
         } else if (lower.startsWith('max-age=')) {
           options.maxAge = parseInt(part.split('=')[1])
+        } else if (lower.startsWith('domain=')) {
+          // Skip domain from backend, let browser use current domain
         }
       })
 
       // Set cookie on response using NextResponse.cookies API
+      // Domain is automatically set to the current request domain (postscholar.org)
       response.cookies.set(name, value, options)
       console.log('[API Proxy] Set cookie:', name, 'with options:', options)
     }

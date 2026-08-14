@@ -42,7 +42,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many attempts, please try again later.' },
   keyGenerator: rateLimiterKeyGenerator,
-  skip: () => config.isProd, // Disable in production (Workers) for now
+  skip: () => config.isProd, // TODO: Replace with Cloudflare Rate Limiting API or Durable Objects
 })
 
 const generalLimiter = rateLimit({
@@ -52,7 +52,7 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
   keyGenerator: rateLimiterKeyGenerator,
-  skip: () => config.isProd, // Disable in production (Workers) for now
+  skip: () => config.isProd, // TODO: Replace with Cloudflare Rate Limiting API or Durable Objects
 })
 
 const db = require('./db')

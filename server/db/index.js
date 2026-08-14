@@ -20,6 +20,20 @@ if (process.env.NODE_ENV === 'production') {
       // neon() returns an array of rows directly
       const rows = await sql(text, params || [])
       return { rows }
+    },
+
+    // Transaction wrapper for Neon serverless (no persistent client)
+    // Executes callback with a transaction-like interface
+    connect: async () => {
+      const sql = neon(process.env.DATABASE_URL)
+
+      return {
+        query: async (text, params) => {
+          const rows = await sql(text, params || [])
+          return { rows }
+        },
+        release: () => {},
+      }
     }
   }
 } else {
