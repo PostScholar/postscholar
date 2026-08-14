@@ -20,6 +20,27 @@ if (!isTest) {
   requireEnv('DATABASE_URL')
   requireEnv('JWT_SECRET')
   requireEnv('CLIENT_URL')
+
+  // Validate OAuth provider configs (warn if incomplete)
+  const hasGoogle = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+  const hasGithub = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
+  const hasOrcid = process.env.ORCID_CLIENT_ID && process.env.ORCID_CLIENT_SECRET
+
+  if (!hasGoogle && !hasGithub && !hasOrcid) {
+    console.warn('⚠️  No OAuth providers configured. Social sign-in will not work.')
+  }
+  if (process.env.GOOGLE_CLIENT_ID && !process.env.GOOGLE_CLIENT_SECRET) {
+    console.error('❌ GOOGLE_CLIENT_ID set but GOOGLE_CLIENT_SECRET missing')
+    process.exit(1)
+  }
+  if (process.env.GITHUB_CLIENT_ID && !process.env.GITHUB_CLIENT_SECRET) {
+    console.error('❌ GITHUB_CLIENT_ID set but GITHUB_CLIENT_SECRET missing')
+    process.exit(1)
+  }
+  if (process.env.ORCID_CLIENT_ID && !process.env.ORCID_CLIENT_SECRET) {
+    console.error('❌ ORCID_CLIENT_ID set but ORCID_CLIENT_SECRET missing')
+    process.exit(1)
+  }
 }
 
 module.exports = {
