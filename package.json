@@ -12,7 +12,9 @@
     "lint": "npm run lint --prefix server && npm run lint --prefix client-next",
     "format": "prettier --write \"server/**/*.js\" \"client-next/**/*.{js,jsx,css}\"",
     "format:check": "prettier --check \"server/**/*.js\" \"client-next/**/*.{js,jsx,css}\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "repository": {
     "type": "git",
@@ -28,6 +30,7 @@
   "devDependencies": {
     "concurrently": "^10.0.0",
     "husky": "^9.1.7",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "wrangler": "^4.123.0"
   }
 }
