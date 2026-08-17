@@ -19,6 +19,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
 
@@ -29,6 +30,9 @@ export default function Register() {
     }
     if (password.length < 8) {
       errors.password = 'At least 8 characters'
+    }
+    if (password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match'
     }
     if (!termsAccepted) {
       errors.terms = 'You must agree to the Terms and Privacy Policy'
@@ -118,6 +122,16 @@ export default function Register() {
               onChange={e => setPassword(e.target.value)}
             />
             {fieldErrors.password && <p className={styles.error}>{fieldErrors.password}</p>}
+
+            <PasswordInput
+              id="confirmPassword"
+              name="confirmPassword"
+              label="Confirm Password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+            />
+            {fieldErrors.confirmPassword && <p className={styles.error}>{fieldErrors.confirmPassword}</p>}
 
             <label className={styles.checkboxRow}>
               <input

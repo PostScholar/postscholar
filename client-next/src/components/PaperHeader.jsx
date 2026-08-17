@@ -137,10 +137,6 @@ export default function PaperHeader({
 
   return (
     <article className={styles.paperBlock}>
-      <div className={styles.sourceBadge}>
-        {paper.source === 'crossref' ? 'Metadata via CrossRef' : 'Manual entry'}
-      </div>
-
       <div className={styles.titleRow}>
         <h1 className={`${styles.title} paper-title`}>{paper.title}</h1>
         <div className={styles.actionButtons}>

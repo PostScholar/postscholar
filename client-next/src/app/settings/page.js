@@ -224,6 +224,16 @@ export default function SettingsPage() {
             Manage followed topics →
           </Link>
         </section>
+
+        <section className={styles.section}>
+          <h2 className={styles.sectionHeading}>Delete account</h2>
+          <p className={styles.sectionDesc}>
+            Permanently delete your account and all associated data. This action cannot be undone.
+          </p>
+          <Link href="/settings/delete-account" className={styles.deleteLink}>
+            Delete your account
+          </Link>
+        </section>
       </div>
     </Layout>
   )

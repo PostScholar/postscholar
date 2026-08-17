@@ -23,6 +23,7 @@ router.get('/suggested', optionalAuth, async (req, res) => {
            SELECT topic FROM topic_follows WHERE user_id = $1
          )
          AND u.id != $1
+         AND u.deleted_at IS NULL
          AND u.id NOT IN (
            SELECT following_id FROM follows WHERE follower_id = $1
          )
@@ -50,11 +51,16 @@ router.get('/suggested', optionalAuth, async (req, res) => {
     if (currentUserId) {
       query += `
         WHERE u.id != $1
+        AND u.deleted_at IS NULL
         AND u.id NOT IN (
           SELECT following_id FROM follows WHERE follower_id = $1
         )
       `
       params.push(currentUserId)
+    } else {
+      query += `
+        WHERE u.deleted_at IS NULL
+      `
     }
 
     query += `
@@ -253,6 +259,85 @@ router.patch('/me', authenticateToken, async (req, res) => {
     res.json(result.rows[0])
   } catch (err) {
     console.error('PATCH /users/me error:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+router.delete('/me', authenticateToken, async (req, res) => {
+  try {
+    const { password, confirmation } = req.body
+
+    if (!confirmation || confirmation !== 'DELETE MY ACCOUNT') {
+      return res.status(400).json({
+        error: 'Confirmation phrase required',
+        code: 'CONFIRMATION_REQUIRED'
+      })
+    }
+
+    const userResult = await pool.query(
+      'SELECT id, password_hash, google_id, github_id, orcid_id FROM users WHERE id = $1',
+      [req.user.userId]
+    )
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const user = userResult.rows[0]
+
+    if (user.password_hash) {
+      if (!password) {
+        return res.status(400).json({
+          error: 'Password required for password-based accounts',
+          code: 'PASSWORD_REQUIRED'
+        })
+      }
+
+      const bcrypt = require('bcryptjs')
+      const validPassword = await bcrypt.compare(password, user.password_hash)
+      if (!validPassword) {
+        return res.status(401).json({
+          error: 'Incorrect password',
+          code: 'INVALID_PASSWORD'
+        })
+      }
+    } else if (!user.google_id && !user.github_id && !user.orcid_id) {
+      return res.status(500).json({ error: 'Account has no valid authentication method' })
+    }
+
+    await pool.query(
+      `UPDATE users SET
+        email = NULL,
+        display_name = NULL,
+        password_hash = NULL,
+        google_id = NULL,
+        github_id = NULL,
+        orcid_id = NULL,
+        bio = NULL,
+        avatar_url = NULL,
+        affiliation = NULL,
+        location = NULL,
+        website_url = NULL,
+        twitter_handle = NULL,
+        google_scholar_url = NULL,
+        username = $1,
+        deleted_at = NOW()
+      WHERE id = $2`,
+      [`deleted_user_${user.id}`, user.id]
+    )
+
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    })
+
+    res.json({
+      message: 'Account deleted successfully',
+      deleted_at: new Date().toISOString()
+    })
+  } catch (err) {
+    console.error('DELETE /users/me error:', err)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

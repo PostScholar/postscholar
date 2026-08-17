@@ -175,3 +175,14 @@
   color: var(--accent-hover);
   text-decoration: underline;
 }
+
+.deleteLink {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--error);
+  text-decoration: none;
+}
+
+.deleteLink:hover {
+  text-decoration: underline;
+}
