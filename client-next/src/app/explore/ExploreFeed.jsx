@@ -9,7 +9,6 @@ import { discussionPath } from '@/lib/discussionSlug'
 import FeedCard from '@/components/FeedCard'
 import FeedSkeleton from '@/components/FeedSkeleton'
 import BrowseSidebar from '@/components/BrowseSidebar'
-import SuggestedAuthors from '@/components/SuggestedAuthors'
 import SortDropdown from '@/components/SortDropdown'
 import TopicDropdown from '@/components/TopicDropdown'
 import styles from './Explore.module.css'
@@ -307,10 +306,6 @@ export default function ExploreFeed({
           </button>
         )}
       </main>
-
-      <div className={styles.suggestedAside}>
-        <SuggestedAuthors />
-      </div>
     </div>
   )
 }
